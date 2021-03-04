@@ -5,6 +5,10 @@ A small package for playing audio files in python. Provides file format independ
 
 Any file format that can be decoded with one of the backends supported by [audioread](https://github.com/beetbox/audioread) is good to go. The package uses [pyaudio](https://github.com/jleb/pyaudio) for awesome cross-platform, dependency-free asynchronous audio playback that stays away from your main thread.
 
+Installation
+-------------
+	pip install just_playback
+
 Usage
 -------------
 ``` python
