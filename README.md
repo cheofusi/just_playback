@@ -1,9 +1,9 @@
 
 just_playback
 =========
-A small package for playing audio files in python. Provides file format independent methods for loading audio files, playing, pausing, resuming, stopping, seeking, getting the current playback position, and changing the volume.
+A small library for playing audio files in python. Provides file format independent methods for loading audio files, playing, pausing, resuming, stopping, seeking, getting the current playback position, and changing the volume.
 
-Any file format that can be decoded with one of the backends supported by [audioread](https://github.com/beetbox/audioread) is good to go. The package uses [pyaudio](https://github.com/jleb/pyaudio) for awesome cross-platform, dependency-free asynchronous audio playback that stays away from your main thread.
+The package uses [miniaudio](https://github.com/mackron/miniaudio) for awesome cross-platform, dependency-free asynchronous audio playback that stays away from your main thread.
 
 Installation
 -------------
@@ -32,12 +32,3 @@ playback.paused # checks if playback is paused.
 playback.duration # returns the length of the audio file in seconds. 
 playback.volume # returns current playback volume
 ```
-
-Note
---------
-The official PyAudio 0.2.11 only supports Python 3.6-.  If you insist on using Python 3.7+, then;
-
- - On Debian and Ubuntu you'll have to first install the `portaudio19-dev` dev files. See [this](https://stackoverflow.com/a/54396790/8925535).
- - On Windows you'll have to pick a wheel that suits your Python version. See [this](https://stackoverflow.com/a/55630212/8925535)
-
-For Mac users, regardless of thy Python version, first run `brew install portaudio`
