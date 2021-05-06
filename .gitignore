@@ -1,5 +1,8 @@
 .vscode
 .pyc
 dist/
+build/
 __pycache__/
 *.egg-info
+test_files/
+test.py
