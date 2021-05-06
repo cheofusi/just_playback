@@ -1,4 +1,6 @@
 from setuptools import setup
+import pathlib
+
 
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read().replace('\r\n', '\n')
@@ -6,7 +8,7 @@ with open('README.md', encoding='utf-8') as f:
 setup(
     name = 'just_playback',       
     packages = ['just_playback'],   
-    version = '0.1',      
+    version = '0.1.1',      
     author = 'Cheo Fusi',                  
     author_email = 'fusibrandon13@gmail.com',
     url = 'https://github.com/cheofusi/just_playback', 
@@ -28,11 +30,12 @@ setup(
         'playback', 
         'audioplayer', 
         'mp3player'
-    ],  
+    ],
+    setup_requires=["cffi>=1.0.0"],
+    cffi_modules=["build_ffi_module.py:ffibuilder"],
     install_requires=[            
-        'numpy',
-        'audioread',
-        'PyAudio'
+        "cffi>=1.0.0",
+        "tinytag"
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',         
