@@ -42,9 +42,9 @@ class Playback:
         """
 
         audio_file = pathlib.Path(path_to_file)
-        # if not audio_file.exists() or not path_to_file:
-        #     logging.error('Audio file not found.')
-        #     return False
+        if not audio_file.exists() or not path_to_file:
+            logging.error('Audio file not found.')
+            return False
         
         self.__log_possible_error(lib.terminate_audio_stream(self.__ma_attrs))
 
@@ -77,7 +77,8 @@ class Playback:
         """
 
         if self.active:
-            self.__log_possible_error(lib.stop_audio_stream(self.__ma_attrs))
+            if not self.__paused:
+                self.__log_possible_error(lib.stop_audio_stream(self.__ma_attrs))
             self.__ma_attrs.frame_offset = 0
             self.__ma_attrs.user_seeked = True
             self.__paused = False
@@ -182,7 +183,7 @@ class Playback:
         """
 
         if not result:
-            logging.error('Miniaudio says: {}'.format(MA_ERRORS[self.__ma_attrs.op_errcode]))
+            logging.debug('Miniaudio says: {}'.format(MA_ERRORS[self.__ma_attrs.op_errcode]))
 
     def __del__(self):
         self.__log_possible_error(lib.terminate_audio_stream(self.__ma_attrs))
