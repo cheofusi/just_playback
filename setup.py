@@ -1,5 +1,4 @@
-from setuptools import setup
-import pathlib
+from setuptools import setup, find_packages
 
 
 with open('README.md', encoding='utf-8') as f:
@@ -7,8 +6,8 @@ with open('README.md', encoding='utf-8') as f:
 
 setup(
     name = 'just_playback',       
-    packages = ['just_playback'],   
-    version = '0.1.1',      
+    packages = find_packages(),  
+    version = '0.1.2',      
     author = 'Cheo Fusi',                  
     author_email = 'fusibrandon13@gmail.com',
     url = 'https://github.com/cheofusi/just_playback', 

@@ -9,6 +9,7 @@ with ma_defs_path.open(mode='r') as f:
     ma_defs = f.read()
 
 miniaudio_src = str(Path.cwd() / 'just_playback' /  'miniaudio' / 'miniaudio.c')
+stb_vorbis_src = str(Path.cwd() / 'just_playback' /  'miniaudio' / 'stb_vorbis.c')
 ma_playback_src = str(Path.cwd() / 'just_playback' /  'ma_playback.c')
 include_dir = Path.cwd() / 'just_playback'
 
@@ -55,7 +56,7 @@ ffibuilder.set_source("_ma_playback",
             """ 
                     #include "ma_playback.h"
             """,
-            sources=[miniaudio_src, ma_playback_src], 
+            sources=[miniaudio_src, stb_vorbis_src, ma_playback_src], 
             include_dirs=[include_dir],  
             libraries=libraries,
             extra_compile_args=compiler_args,
