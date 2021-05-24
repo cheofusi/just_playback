@@ -8,10 +8,10 @@ ma_defs_path = Path.cwd() / 'just_playback' / 'ma_defs.txt'
 with ma_defs_path.open(mode='r') as f:
     ma_defs = f.read()
 
-miniaudio_src = str(Path.cwd() / 'just_playback' /  'miniaudio' / 'miniaudio.c')
-stb_vorbis_src = str(Path.cwd() / 'just_playback' /  'miniaudio' / 'stb_vorbis.c')
-ma_playback_src = str(Path.cwd() / 'just_playback' /  'ma_playback.c')
-include_dir = Path.cwd() / 'just_playback'
+miniaudio_src = str(Path('just_playback', 'miniaudio', 'miniaudio.c'))
+stb_vorbis_src = str(Path('just_playback', 'miniaudio', 'stb_vorbis.c'))
+ma_playback_src = str(Path('just_playback', 'ma_playback.c'))
+include_dir = str(Path('just_playback'))
 
 libraries = []
 compiler_args = []
