@@ -36,7 +36,6 @@ void init_attrs(Attrs* attrs) {
 
 void init_file_specific_attrs(Attrs* attrs) {
     attrs->sample_rate  = 0;
-    attrs->duration     = 0;
     attrs->num_channels = 0;
 }
 

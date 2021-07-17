@@ -17,7 +17,6 @@ typedef struct {
     bool audio_stream_ready;
 
     int sample_rate;
-    double duration;
     int num_channels;
     
     bool user_seeked;
