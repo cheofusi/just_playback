@@ -159,7 +159,7 @@ class Playback:
     
     @property
     def duration(self) -> float:
-        return self.__ma_attrs.duration
+        return self.__file_duration
     
     @property
     def volume(self) -> float:
