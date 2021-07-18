@@ -56,6 +56,8 @@ class Playback:
         self.__log_possible_error(lib.init_audio_stream(self.__ma_attrs))
         self.__log_possible_error(lib.set_device_volume(self.__ma_attrs, self.__playback_volume))
         self.__file_duration = TinyTag.get(path_to_file).duration
+        
+        return True
 
     def play(self) -> None:
         """
