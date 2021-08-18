@@ -25,10 +25,13 @@ playback.stop() # stops playback. Has no effect if playback is not active
 playback.seek(60) # positions playback at 1 minute from the start of the audio file
 playback.set_volume(0.5) # sets the playback volume to 50% of the audio file's original value
 
+playback.loop_at_end(True) # since 0.1.5. Causes playback to automatically restart when it completes.
+
 playback.active # checks if playback is active i.e playing or paused
 playback.curr_pos # returns the current absolute playback position in seconds from 
 				  #	the start of the audio file (unlike pygame.mixer.get_pos). 
 playback.paused # checks if playback is paused.
 playback.duration # returns the length of the audio file in seconds. 
 playback.volume # returns current playback volume
+playback.loops_at_end # checks if playback is set to restart when it completes.
 ```
