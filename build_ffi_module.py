@@ -23,32 +23,34 @@ if os.name == "posix":
 ffibuilder.cdef( ma_defs + '\n\n'
                 """ 
                     typedef struct {  
+                        ma_uint32 num_playback_devices;
+
                         ma_decoder decoder;
                         ma_device_config deviceConfig;
                         ma_device device;
 
                         ma_uint64 frame_offset;
+
+                        float playback_volume;
+                        bool loops_at_end;
+
+                        bool frame_offset_modified;
                         bool audio_stream_ready;
-
-                        int sample_rate;
-                        int num_channels;
-
-                        bool user_seeked;
-                        bool playback_active;
-
-                        int op_errcode;
+                        bool audio_stream_active;
+                        bool audio_stream_ended_naturally;
                     }
                     Attrs;
                     
-                    bool check_devices();
+                    ma_result check_available_playback_devices(Attrs* attrs);
                     void init_attrs(Attrs* attrs);
-                    bool load_file(Attrs* attrs, const char* path_to_file);
-                    bool init_audio_stream(Attrs* attrs);
-                    bool start_audio_stream(Attrs* attrs);
-                    bool stop_audio_stream(Attrs* attrs);
-                    bool terminate_audio_stream(Attrs* attrs);
-                    bool set_device_volume(Attrs* attrs, float volume);
-                    float get_device_volume(Attrs* attrs);
+                    ma_result load_file(Attrs* attrs, const char* path_to_file);
+                    ma_result init_audio_stream(Attrs* attrs);
+                    ma_result start_audio_stream(Attrs* attrs);
+                    ma_result stop_audio_stream(Attrs* attrs);
+                    ma_result terminate_audio_stream(Attrs* attrs);
+                    void audio_stream_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
+                    ma_result set_device_volume(Attrs* attrs);
+                    ma_result get_device_volume(Attrs* attrs);
                 """)
 
 ffibuilder.set_source("_ma_playback",  
