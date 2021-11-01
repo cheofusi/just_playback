@@ -104,6 +104,7 @@ ma_result terminate_audio_stream(Attrs* attrs)
     attrs->frame_offset = 0;
     attrs->audio_stream_ready = false;
     attrs->audio_stream_active = false;
+    attrs->audio_stream_ended_naturally = false;
     
     return ma_res;
 }
@@ -111,7 +112,7 @@ ma_result terminate_audio_stream(Attrs* attrs)
 
 void audio_stream_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
-    // The audio playback device uses this callback for requesting audio samples. It continues making
+    // The audio playback device uses this callback to request audio samples. It continues making
     // requests regardless of whether or not the decoder has reached the end of the audio file. Reason
     // why Attrs::audio_stream_ended_naturally has to be set so the device can be stopped from the main
     // thread (stopping it here isn't thread safe) 
@@ -167,5 +168,5 @@ ma_result get_device_volume(Attrs* attrs)
     ma_result ma_res = ma_device_get_master_volume(&(attrs->device), &volume);
     attrs->playback_volume = volume;
 
-    return volume;
+    return ma_res;
 }
