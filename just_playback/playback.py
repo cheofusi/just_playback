@@ -55,8 +55,6 @@ class Playback:
         self.__bind(lib.set_device_volume(self.__ma_attrs))
 
         self.__file_duration = TinyTag.get(path_to_file).duration
-        
-        return True
 
     def play(self) -> None:
         """
@@ -161,7 +159,7 @@ class Playback:
     @property
     def active(self) -> bool:
         """
-            Returns True if playback is playing or is paused and False otherwise
+            True if playback is playing or is paused and False otherwise
         """
     
         if not self.__ma_attrs.audio_stream_ready:
@@ -173,7 +171,7 @@ class Playback:
     @property
     def curr_pos(self) -> float:
         """
-            Returns playback's current position/offset in seconds from the
+            The playback's current position/offset in seconds from the
             beginning of audio file if playback is active or the file has 
             been loaded and -1 otherwise
         """
@@ -194,7 +192,7 @@ class Playback:
     @property
     def duration(self) -> float:
         """
-            Returns the length in seconds of the audio file, which is 0 if no file has
+            The length in seconds of the audio file, which is 0 if no file has
             been loaded
         """
 
@@ -203,7 +201,7 @@ class Playback:
     @property
     def volume(self) -> float:
         """
-            Returns playback's current volume, a value in the interval [0, 1]
+            The playback's current volume, a value in the interval [0, 1]
         """
 
         if self.active:
