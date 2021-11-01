@@ -17,7 +17,7 @@ playback = Playback() # creates an object for managing playback of a single audi
 playback.load_file('music-files/sample.mp3')
 # or just pass the filename directly to the constructor
 
-playback.play() # plays loaded file from the beginning
+playback.play() # plays loaded audio file from the beginning
 playback.pause() # pauses playback. Has no effect if playback is already paused
 playback.resume() # resumes playback. Has no effect if playback is playing
 playback.stop() # stops playback. Has no effect if playback is not active
@@ -27,11 +27,11 @@ playback.set_volume(0.5) # sets the playback volume to 50% of the audio file's o
 
 playback.loop_at_end(True) # since 0.1.5. Causes playback to automatically restart when it completes.
 
-playback.active # checks if playback is active i.e playing or paused
-playback.curr_pos # returns the current absolute playback position in seconds from 
+playback.active # True if playback is active i.e playing or paused
+playback.curr_pos # current absolute playback position in seconds from 
 				  #	the start of the audio file (unlike pygame.mixer.get_pos). 
-playback.paused # checks if playback is paused.
-playback.duration # returns the length of the audio file in seconds. 
-playback.volume # returns current playback volume
-playback.loops_at_end # checks if playback is set to restart when it completes.
+playback.paused # True if playback is paused.
+playback.duration # length of the audio file in seconds. 
+playback.volume # current playback volume
+playback.loops_at_end # True if playback is set to restart when it completes.
 ```
