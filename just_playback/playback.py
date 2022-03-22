@@ -167,6 +167,18 @@ class Playback:
         
         else:
             return self.__ma_attrs.audio_stream_active or self.__paused
+    
+    @property
+    def playing(self) -> bool:
+        """
+            True if playback is playing
+        """
+
+        if not self.__ma_attrs.audio_stream_ready:
+            return False
+        
+        else:
+            return self.__ma_attrs.audio_stream_active
 
     @property
     def curr_pos(self) -> float:
