@@ -46,7 +46,7 @@ class Playback:
 
         audio_file = pathlib.Path(path_to_file)
         if not audio_file.exists() or not path_to_file:
-            raise FileNotFoundError('Audio file not found.')
+            raise FileNotFoundError('Audio file not found: %s ' % path_to_file)
         
         self.__bind(lib.terminate_audio_stream(self.__ma_attrs))
 
@@ -167,6 +167,18 @@ class Playback:
         
         else:
             return self.__ma_attrs.audio_stream_active or self.__paused
+    
+    @property
+    def playing(self) -> bool:
+        """
+            True if playback is playing
+        """
+
+        if not self.__ma_attrs.audio_stream_ready:
+            return False
+        
+        else:
+            return self.__ma_attrs.audio_stream_active
 
     @property
     def curr_pos(self) -> float:
