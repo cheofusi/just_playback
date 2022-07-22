@@ -1,6 +1,7 @@
 
-just_playback
+just_playback (with wheels)
 =========
+
 A small library for playing audio files in python. Provides file format independent methods for loading audio files, playing, pausing, resuming, stopping, seeking, getting the current playback position, and changing the volume.
 
 The package uses [miniaudio](https://github.com/mackron/miniaudio) for awesome cross-platform, dependency-free asynchronous audio playback that stays away from your main thread.
