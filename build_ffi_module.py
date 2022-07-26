@@ -1,4 +1,5 @@
 import os
+import platform
 from pathlib import Path
 
 from cffi import FFI
@@ -15,9 +16,14 @@ include_dir = str(Path('just_playback'))
 
 libraries = []
 compiler_args = []
+
 if os.name == "posix":
     libraries = ["dl", "m", "pthread"]
-    compiler_args = ["-g1", "-O3", "-ffast-math", "-mtune=native", "-march=native" ]
+    compiler_args = ["-g1", "-O3", "-ffast-math"]
+    
+if platform.system() != "Darwin":
+    compiler_args += ["-march=native"]
+
 
 
 ffibuilder.cdef( ma_defs + '\n\n'
