@@ -5,3 +5,5 @@ build/
 __pycache__/
 *.egg-info
 test_files/
+*.todo
+wheelhouse/
