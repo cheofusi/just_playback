@@ -11,19 +11,14 @@ jobs:
         os: [ubuntu-20.04, windows-2019]
 
     steps:
-      - uses: actions/checkout@v2
-
-      - uses: actions/setup-python@v2
-
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.4.0
+      - uses: actions/checkout@v3
 
       - name: Build wheels
-        run: python -m cibuildwheel --output-dir wheels
+        uses: pypa/cibuildwheel@v2.8.1
 
       - uses: actions/upload-artifact@v2
         with:
-          path: ./wheels/*.whl
+          path: ./wheelhouse/*.whl
 
   build_wheels_macos:
     name: Build wheels on macos-11
@@ -34,7 +29,8 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.8.1
         env:
-          CIBW_ARCHS_MACOS: x86_64 universal2
+          CIBW_ARCHS_MACOS: x86_64 arm64
+          CIBW_TEST_SKIP: "*_arm64"
 
       - uses: actions/upload-artifact@v3
         with:
