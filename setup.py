@@ -30,7 +30,6 @@ setup(
         'audioplayer', 
         'mp3player'
     ],
-    setup_requires=["cffi>=1.0.0"],
     cffi_modules=["build_ffi_module.py:ffibuilder"],
     install_requires=[            
         "cffi>=1.0.0",
