@@ -28,6 +28,7 @@ playback.set_volume(0.5) # sets the playback volume to 50% of the audio file's o
 playback.loop_at_end(True) # since 0.1.5. Causes playback to automatically restart when it completes.
 
 playback.active # True if playback is active i.e playing or paused
+playback.playing # True if playback is active and not paused
 playback.curr_pos # current absolute playback position in seconds from 
 				  #	the start of the audio file (unlike pygame.mixer.get_pos). 
 playback.paused # True if playback is paused.
