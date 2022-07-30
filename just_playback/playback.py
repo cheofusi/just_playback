@@ -46,7 +46,7 @@ class Playback:
 
         audio_file = pathlib.Path(path_to_file)
         if not audio_file.exists() or not path_to_file:
-            raise FileNotFoundError('Audio file not found: %s ' % path_to_file)
+            raise FileNotFoundError('Audio file not found: {}'.format(path_to_file))
         
         self.__bind(lib.terminate_audio_stream(self.__ma_attrs))
 
