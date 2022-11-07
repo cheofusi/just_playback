@@ -65,6 +65,7 @@ class Playback:
 
         if not self.__ma_attrs.audio_stream_ready:
             logging.error('No audio file has been loaded yet!!')
+
         else:
             if self.active:
                 self.stop()
@@ -77,9 +78,11 @@ class Playback:
                     self.__bind(lib.stop_audio_stream(self.__ma_attrs))
                     self.__ma_attrs.audio_stream_ended_naturally = False
 
-            self.seek(start)
+            self.__ma_attrs.frame_offset = 0
+            self.__ma_attrs.frame_offset_modified = True
             self.__paused = False
             self.__bind(lib.start_audio_stream(self.__ma_attrs))
+            self.seek(start)
 
     def stop(self) -> None:
         """
