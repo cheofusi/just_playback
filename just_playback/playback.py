@@ -56,16 +56,15 @@ class Playback:
 
         self.__file_duration = TinyTag.get(path_to_file).duration
 
-    def play(self) -> None:
+    def play(self, start=0) -> None:
         """
-            Plays the loaded file from the beginning. Ignores the fact
-            that the current playback might be paused. Has no effect if no 
-            audio file has been loaded
+            Plays the loaded file from start (beginning by default). Ignores
+            the fact that the current playback might be paused. Has no effect
+            if no audio file has been loaded.
         """
 
         if not self.__ma_attrs.audio_stream_ready:
             logging.error('No audio file has been loaded yet!!')
-        
         else:
             if self.active:
                 self.stop()
@@ -78,8 +77,7 @@ class Playback:
                     self.__bind(lib.stop_audio_stream(self.__ma_attrs))
                     self.__ma_attrs.audio_stream_ended_naturally = False
 
-            self.__ma_attrs.frame_offset = 0
-            self.__ma_attrs.frame_offset_modified = True
+            self.seek(start)
             self.__paused = False
             self.__bind(lib.start_audio_stream(self.__ma_attrs))
 
