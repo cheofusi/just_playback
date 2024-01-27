@@ -19,8 +19,8 @@ compiler_args = []
 
 if os.name == "posix":
     libraries = ["dl", "m", "pthread"]
-    compiler_args = ["-g1", "-O3", "-ffast-math"]
-    
+    compiler_args = ["-g1", "-O3"]
+
 if platform.system() != "Darwin":
     compiler_args += ["-march=native"]
 
