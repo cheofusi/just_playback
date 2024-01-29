@@ -4,7 +4,7 @@ __all__ = ('MA_RESULT_STR', 'MiniaudioError')
 
 MA_RESULT_STR = dict([
     (0, 'MA_SUCCESS'),
-    (-1, 'MA_ERROR'),
+    (-1, 'MA_ERROR'), # A generic error.
     (-2, 'MA_INVALID_ARGS'),
     (-3, 'MA_INVALID_OPERATION'),
     (-4, 'MA_OUT_OF_MEMORY'),
@@ -20,7 +20,7 @@ MA_RESULT_STR = dict([
     (-14, 'MA_NOT_DIRECTORY'),
     (-15, 'MA_IS_DIRECTORY'),
     (-16, 'MA_DIRECTORY_NOT_EMPTY'),
-    (-17, 'MA_END_OF_FILE'),
+    (-17, 'MA_AT_END'),
     (-18, 'MA_NO_SPACE'),
     (-19, 'MA_BUSY'),
     (-20, 'MA_IO_ERROR'),
@@ -56,23 +56,32 @@ MA_RESULT_STR = dict([
     (-50, 'MA_IN_PROGRESS'),
     (-51, 'MA_CANCELLED'),
     (-52, 'MA_MEMORY_ALREADY_MAPPED'),
-    (-53, 'MA_AT_END'),
-    (-100, 'MA_FORMAT_NOT_SUPPORTED'),
-    (-101, 'MA_DEVICE_TYPE_NOT_SUPPORTED'),
-    (-102, 'MA_SHARE_MODE_NOT_SUPPORTED'),
-    (-103, 'MA_NO_BACKEND'),
-    (-104, 'MA_NO_DEVICE'),
-    (-105, 'MA_API_NOT_FOUND'),
-    (-106, 'MA_INVALID_DEVICE_CONFIG'),
-    (-107, 'MA_LOOP'),
-    (-200, 'MA_DEVICE_NOT_INITIALIZED'),
-    (-201, 'MA_DEVICE_ALREADY_INITIALIZED'),
-    (-202, 'MA_DEVICE_NOT_STARTED'),
-    (-203, 'MA_DEVICE_NOT_STOPPED'),
-    (-300, 'MA_FAILED_TO_INIT_BACKEND'),
-    (-301, 'MA_FAILED_TO_OPEN_BACKEND_DEVICE'),
-    (-302, 'MA_FAILED_TO_START_BACKEND_DEVICE'),
-    (-303, 'MA_FAILED_TO_STOP_BACKEND_DEVICE')
+
+    # General non-standard errors.
+    (-100, 'MA_CRC_MISMATCH'),
+
+    # General miniaudio-specific errors.
+    (-200, 'MA_FORMAT_NOT_SUPPORTED'),
+    (-201, 'MA_DEVICE_TYPE_NOT_SUPPORTED'),
+    (-202, 'MA_SHARE_MODE_NOT_SUPPORTED'),
+    (-203, 'MA_NO_BACKEND'),
+    (-204, 'MA_NO_DEVICE'),
+    (-205, 'MA_API_NOT_FOUND'),
+    (-206, 'MA_INVALID_DEVICE_CONFIG'),
+    (-207, 'MA_LOOP'),
+    (-208, 'MA_BACKEND_NOT_ENABLED'),
+
+    # State errors.
+    (-300, 'MA_DEVICE_NOT_INITIALIZED'),
+    (-301, 'MA_DEVICE_ALREADY_INITIALIZED'),
+    (-302, 'MA_DEVICE_NOT_STARTED'),
+    (-303, 'MA_DEVICE_NOT_STOPPED'),
+
+    # Operation errors
+    (-400, 'MA_FAILED_TO_INIT_BACKEND'),
+    (-401, 'MA_FAILED_TO_OPEN_BACKEND_DEVICE'),
+    (-402, 'MA_FAILED_TO_START_BACKEND_DEVICE'),
+    (-403, 'MA_FAILED_TO_STOP_BACKEND_DEVICE')
 ])
 
 

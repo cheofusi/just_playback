@@ -119,6 +119,7 @@ void audio_stream_callback(ma_device* pDevice, void* pOutput, const void* pInput
     // thread (stopping it here isn't thread safe) 
 
     Attrs* attrs = (Attrs*)pDevice->pUserData;
+    ma_uint64 num_read_frames;
     
     if (attrs->frame_offset_modified) 
     {
@@ -128,9 +129,9 @@ void audio_stream_callback(ma_device* pDevice, void* pOutput, const void* pInput
         attrs->frame_offset_modified = false;
     }
 
-    ma_uint32 num_read_frames = ma_decoder_read_pcm_frames(&(attrs->decoder), pOutput, frameCount);
+    ma_result ma_res = ma_decoder_read_pcm_frames(&(attrs->decoder), pOutput, frameCount, &num_read_frames);
     attrs->frame_offset += num_read_frames;
-    if (num_read_frames < frameCount) 
+    if (ma_res == MA_AT_END) 
     {
         // decoder has reached the end of the audio file
 
