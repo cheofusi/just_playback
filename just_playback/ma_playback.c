@@ -44,6 +44,7 @@ void init_attrs(Attrs* attrs)
     attrs->audio_stream_ended_naturally  = false;
 }
 
+/// TODO: Add load_file_w variant to be called windows utf-16 characters. 
 
 ma_result load_file(Attrs* attrs, const char* path_to_file) 
 {
@@ -127,30 +128,26 @@ void audio_stream_callback(ma_device* pDevice, void* pOutput, const void* pInput
         attrs->frame_offset_modified = false;
     }
 
-    if (&(attrs->decoder) != NULL)
+    ma_uint32 num_read_frames = ma_decoder_read_pcm_frames(&(attrs->decoder), pOutput, frameCount);
+    attrs->frame_offset += num_read_frames;
+    if (num_read_frames < frameCount) 
     {
-        ma_uint32 num_read_frames = ma_decoder_read_pcm_frames(&(attrs->decoder), pOutput, frameCount);
-        attrs->frame_offset += num_read_frames;
-        if (num_read_frames < frameCount) 
+        // decoder has reached the end of the audio file
+
+        if (attrs->loops_at_end)
         {
-            // decoder has reached the end of the audio file
-
-            if (attrs->loops_at_end)
-            {
-                ma_decoder_seek_to_pcm_frame(&(attrs->decoder), 0);
-                attrs->frame_offset = 0;
-            }
-
-            else
-            {
-                attrs->audio_stream_active = false;
-                attrs->audio_stream_ended_naturally = true;
-            }
+            ma_decoder_seek_to_pcm_frame(&(attrs->decoder), 0);
+            attrs->frame_offset = 0;
         }
 
-        (void)pInput;
+        else
+        {
+            attrs->audio_stream_active = false;
+            attrs->audio_stream_ended_naturally = true;
+        }
     }
 
+    (void)pInput;
 }
 
 
