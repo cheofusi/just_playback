@@ -12,27 +12,28 @@ Installation
 Usage
 -------------
 ``` python
-from just_playback import Playback
-playback = Playback() # creates an object for managing playback of a single audio file
-playback.load_file('music-files/sample.mp3')
+>>> from just_playback import Playback
+>>> playback = Playback() # creates an object for managing playback of a single audio file
+>>> playback.load_file('music-files/sample.mp3')
 # or just pass the filename directly to the constructor
 
-playback.play() # plays loaded audio file from the beginning
-playback.pause() # pauses playback. Has no effect if playback is already paused
-playback.resume() # resumes playback. Has no effect if playback is playing
-playback.stop() # stops playback. Has no effect if playback is not active
+>>> playback.play() # plays loaded audio file from the beginning
+>>> playback.pause() # pauses playback. No effect if playback is already paused
+>>> playback.resume() # resumes playback. No effect if playback is playing
+>>> playback.stop() # stops playback. No effect if playback is not active
 
-playback.seek(60) # positions playback at 1 minute from the start of the audio file
-playback.set_volume(0.5) # sets the playback volume to 50% of the audio file's original value
+>>> playback.seek(60) # positions playback at 1 minute from the start of the audio file. No effect
+# if playback is not active
+>>> playback.set_volume(0.5) # sets the playback volume to 50% of the audio file's original value
 
-playback.loop_at_end(True) # since 0.1.5. Causes playback to automatically restart when it completes.
+>>> playback.loop_at_end(True) # since 0.1.5. Causes playback to automatically restart when it completes.
 
-playback.active # True if playback is active i.e playing or paused
-playback.playing # True if playback is active and not paused
-playback.curr_pos # current absolute playback position in seconds from 
+>>> playback.active # True if playback is active i.e playing or paused
+>>> playback.playing # True if playback is active and not paused
+>>> playback.curr_pos # current absolute playback position in seconds from 
 				  #	the start of the audio file (unlike pygame.mixer.get_pos). 
-playback.paused # True if playback is paused.
-playback.duration # length of the audio file in seconds. 
-playback.volume # current playback volume
-playback.loops_at_end # True if playback is set to restart when it completes.
+>>> playback.paused # True if playback is paused.
+>>> playback.duration # length of the audio file in seconds. 
+>>> playback.volume # current playback volume
+>>> playback.loops_at_end # True if playback is set to restart when it completes.
 ```
