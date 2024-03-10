@@ -7,7 +7,7 @@ with open('README.md', encoding='utf-8') as f:
 setup(
     name = 'just_playback',       
     packages = find_packages(),  
-    version = '0.1.7',      
+    version = '0.1.8',      
     author = 'Cheo Fusi',                  
     author_email = 'fusibrandon13@gmail.com',
     url = 'https://github.com/cheofusi/just_playback', 
@@ -48,5 +48,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
 )
