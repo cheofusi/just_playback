@@ -1,5 +1,6 @@
 import pathlib
 import math
+import platform
 import logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 from typing import Optional, Any
@@ -49,8 +50,12 @@ class Playback:
             raise FileNotFoundError('Audio file not found: {}'.format(path_to_file))
         
         self.__bind(lib.terminate_audio_stream(self.__ma_attrs))
+        
+        if platform.system() == 'Windows':
+            self.__bind(lib.load_file_w(self.__ma_attrs, path_to_file.encode('utf-16le')))
+        else:
+            self.__bind(lib.load_file(self.__ma_attrs, path_to_file.encode('utf-8')))
 
-        self.__bind(lib.load_file(self.__ma_attrs, path_to_file.encode('utf-8')))
         self.__bind(lib.init_audio_stream(self.__ma_attrs))
         self.__bind(lib.set_device_volume(self.__ma_attrs))
 

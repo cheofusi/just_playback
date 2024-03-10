@@ -7,7 +7,6 @@
 #include "miniaudio/miniaudio.h"
 
 
-
 typedef struct 
 {
     ma_uint32 num_playback_devices;
@@ -28,10 +27,10 @@ typedef struct
 }
 Attrs;
 
-
 ma_result check_available_playback_devices(Attrs* attrs);
 void init_attrs(Attrs* attrs);
 ma_result load_file(Attrs* attrs, const char* path_to_file);
+ma_result load_file_w(Attrs* attrs, const wchar_t* path_to_file);
 ma_result init_audio_stream(Attrs* attrs);
 ma_result start_audio_stream(Attrs* attrs);
 ma_result stop_audio_stream(Attrs* attrs);

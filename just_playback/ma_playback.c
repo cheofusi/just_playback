@@ -44,7 +44,6 @@ void init_attrs(Attrs* attrs)
     attrs->audio_stream_ended_naturally  = false;
 }
 
-/// TODO: Add load_file_w variant to be called windows utf-16 characters. 
 
 ma_result load_file(Attrs* attrs, const char* path_to_file) 
 {
@@ -59,6 +58,21 @@ ma_result load_file(Attrs* attrs, const char* path_to_file)
     
     return ma_res;
 }
+
+ma_result load_file_w(Attrs* attrs, const wchar_t* path_to_file) 
+{
+    // Open an audio file and read the necessary config needed for getting audio samples
+    // from the file.
+
+    ma_result ma_res = ma_decoder_init_file_w(path_to_file, NULL, &(attrs->decoder));
+    
+    attrs->deviceConfig.playback.format   = attrs->decoder.outputFormat;
+    attrs->deviceConfig.playback.channels = attrs->decoder.outputChannels;
+    attrs->deviceConfig.sampleRate        = attrs->decoder.outputSampleRate;
+    
+    return ma_res;
+}
+
 
 
 ma_result init_audio_stream(Attrs* attrs)
