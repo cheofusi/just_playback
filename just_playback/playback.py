@@ -52,7 +52,7 @@ class Playback:
         self.__bind(lib.terminate_audio_stream(self.__ma_attrs))
         
         if platform.system() == 'Windows':
-            self.__bind(lib.load_file_w(self.__ma_attrs, path_to_file.encode('utf-16le')))
+            self.__bind(lib.load_file_w(self.__ma_attrs, path_to_file))
         else:
             self.__bind(lib.load_file(self.__ma_attrs, path_to_file.encode('utf-8')))
 
