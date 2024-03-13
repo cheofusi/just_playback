@@ -7,14 +7,14 @@ The package uses [miniaudio](https://github.com/mackron/miniaudio) for awesome c
 
 Installation
 -------------
-	pip install just_playback
+	pip install just-playback
 
 Usage
 -------------
 ``` python
 >>> from just_playback import Playback
 >>> playback = Playback() # creates an object for managing playback of a single audio file
->>> playback.load_file('music-files/sample.mp3')
+>>> playback.load_file('music/sample.mp3')
 # or just pass the filename directly to the constructor
 
 >>> playback.play() # plays loaded audio file from the beginning
