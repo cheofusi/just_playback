@@ -30,6 +30,7 @@ class Playback:
             
             self.__paused: bool = False
             self.__file_duration: float = 0.0
+            self.__playback_speed: float = 1.0  # Normal speed
 
             if path_to_file:
                 self.load_file(path_to_file)   
@@ -149,6 +150,22 @@ class Playback:
         self.__ma_attrs.playback_volume = min(max(volume, 0), 1)
         if self.active:
             self.__bind(lib.set_device_volume(self.__ma_attrs))
+
+    def set_speed(self, speed: float) -> None:
+        """
+            Sets the playback speed. 1.0 is normal speed, 0.5 is half speed (slower), 
+            2.0 is double speed (faster). Persists across audio file loads until reset. 
+
+        Args: 
+            speed: A postive value representing speed multiplier. 
+        """
+        if speed <= 0:
+            raise ValueError("Speed must be a positive value")
+
+        self.__playback_speed = speed
+
+        if self.__ma_attrs.audio_stream_ready:
+            self.__bind(lib.set_playback_speed(self.__ma_attrs, speed))
     
     def loop_at_end(self, loops_at_end: bool) -> None:
         """
@@ -226,6 +243,13 @@ class Playback:
         
         return self.__ma_attrs.playback_volume
     
+    @property 
+    def speed(self) -> float:
+        """
+            The current playback speed multiplier. 1.0 is normal speed.
+        """
+        return self.__playback_speed
+
     @property
     def loops_at_end(self) -> bool:
         return self.__ma_attrs.loops_at_end

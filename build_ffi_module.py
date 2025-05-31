@@ -28,22 +28,29 @@ if platform.system() != "Darwin":
 
 ffibuilder.cdef( ma_defs + '\n\n'
                 """ 
+
                     typedef struct {  
                         ma_uint32 num_playback_devices;
 
                         ma_decoder decoder;
                         ma_device_config deviceConfig;
                         ma_device device;
+                        ma_resampler resampler; 
 
                         ma_uint64 frame_offset;
 
                         float playback_volume;
+                        float playback_speed; 
                         bool loops_at_end;
 
                         bool frame_offset_modified;
                         bool audio_stream_ready;
                         bool audio_stream_active;
                         bool audio_stream_ended_naturally;
+                        bool resampler_initialized; 
+
+                        void* temp_buffer; 
+                        size_t temp_buffer_size;
                     }
                     Attrs;
                     
@@ -58,6 +65,10 @@ ffibuilder.cdef( ma_defs + '\n\n'
                     void audio_stream_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
                     ma_result set_device_volume(Attrs* attrs);
                     ma_result get_device_volume(Attrs* attrs);
+                    ma_result set_playback_speed(Attrs* attrs, float speed); 
+                    ma_result init_resampler(Attrs* attrs);
+                    void handle_speed_controlled_playback(Attrs* attrs, void* pOutput, ma_uint32 frameCount);
+                    void handle_end_of_stream(Attrs* attrs);
                 """)
 
 ffibuilder.set_source("_ma_playback",  

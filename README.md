@@ -25,6 +25,7 @@ Usage
 >>> playback.seek(60) # positions playback at 1 minute from the start of the audio file. No effect
 # if playback is not active
 >>> playback.set_volume(0.5) # sets the playback volume to 50% of the audio file's original value
+>>> playback.set_speed(1.5) # sets the speed of the playback to 1.5 times the original speed
 
 >>> playback.loop_at_end(True) # since 0.1.5. Causes playback to automatically restart when it completes.
 
@@ -36,4 +37,5 @@ Usage
 >>> playback.duration # length of the audio file in seconds. 
 >>> playback.volume # current playback volume
 >>> playback.loops_at_end # True if playback is set to restart when it completes.
+>>> playback.speed # current playback speed
 ```

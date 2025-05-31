@@ -14,16 +14,22 @@ typedef struct
     ma_decoder decoder;
     ma_device_config deviceConfig;
     ma_device device;
+    ma_resampler resampler; 
 
     ma_uint64 frame_offset;
     
     float playback_volume; // persists across multiple file loads
+    float playback_speed; 
     bool loops_at_end; // persists across multiple file loads
     
     bool frame_offset_modified; // set when some function other than audio_stream_callback modifies frame_offset's value
     bool audio_stream_ready; // true if the audio device has been initialized & is ready to receive audio samples
     bool audio_stream_active; // true if audio samples are being sent to the audio device
     bool audio_stream_ended_naturally; // set when the audio file plays to completion
+    bool resampler_initialized; 
+
+    void* temp_buffer; 
+    size_t temp_buffer_size;
 }
 Attrs;
 
@@ -38,5 +44,9 @@ ma_result terminate_audio_stream(Attrs* attrs);
 void audio_stream_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
 ma_result set_device_volume(Attrs* attrs);
 ma_result get_device_volume(Attrs* attrs);
+ma_result set_playback_speed(Attrs* attrs, float speed); 
+ma_result init_resampler(Attrs* attrs);
+void handle_speed_controlled_playback(Attrs* attrs, void* pOutput, ma_uint32 frameCount);
+void handle_end_of_stream(Attrs* attrs);
 
 #endif

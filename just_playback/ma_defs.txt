@@ -229,3 +229,25 @@ struct ma_decoder
     ma_uint32  outputSampleRate;
     ...;
 };
+
+
+typedef enum
+{
+    ma_resample_algorithm_linear = 0,
+    ...
+} ma_resample_algorithm;
+
+typedef struct
+{
+    ma_format format;
+    ma_uint32 channels;
+    ma_uint32 sampleRateIn;
+    ma_uint32 sampleRateOut;
+    ma_resample_algorithm algorithm;
+    ...;
+} ma_resampler_config;
+
+typedef struct
+{
+    ...;
+} ma_resampler;
