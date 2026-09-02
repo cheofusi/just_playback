@@ -1,16 +1,23 @@
+# just_playback
 
-just_playback
-=========
-A small library for playing audio files in python. Provides file format independent methods for loading audio files, playing, pausing, resuming, stopping, seeking, getting the current playback position, and changing the volume.
+A small Python library for playing audio files. It provides file-format-independent methods for loading, playing, pausing, resuming, stopping, and seeking audio, as well as inspecting playback position and controlling volume.
 
 The package uses [miniaudio](https://github.com/mackron/miniaudio) for awesome cross-platform, dependency-free asynchronous audio playback that stays away from your main thread.
 
-Installation
--------------
-	pip install just-playback
+## Requirements
 
-Usage
--------------
+just_playback requires Python 3.9 or newer.
+
+## Installation
+
+```shell
+python -m pip install just-playback
+```
+
+Pre-built wheels do not require a compiler. Installing from source requires a C compiler and the development headers for your Python installation.
+
+## Usage
+
 ``` python
 >>> from just_playback import Playback
 >>> playback = Playback() # creates an object for managing playback of a single audio file
@@ -36,4 +43,18 @@ Usage
 >>> playback.duration # length of the audio file in seconds. 
 >>> playback.volume # current playback volume
 >>> playback.loops_at_end # True if playback is set to restart when it completes.
+```
+
+## Development
+
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then create and synchronize the project environment:
+
+```shell
+uv sync
+```
+
+Build the source distribution:
+
+```shell
+uv build --sdist
 ```

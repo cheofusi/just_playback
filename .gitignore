@@ -1,5 +1,7 @@
 .vscode
-.pyc
+.vscode-ctags
+.venv/
+*.py[cod]
 dist/
 build/
 __pycache__/
@@ -8,3 +10,4 @@ test_files/
 *.todo
 wheelhouse/
 wheels/
+/scratch/

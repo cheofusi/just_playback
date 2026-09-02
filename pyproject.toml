@@ -1,3 +1,70 @@
 [build-system]
-requires = ["setuptools>=42", "cffi>=1.0.0"]
+requires = [
+    "setuptools>=77",
+    "cffi>=1.0.0",
+]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "just_playback"
+version = "0.1.9"
+description = "A small package for file-format-independent audio playback control"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Brandon Cheo Fusi", email = "fusibrandon13@gmail.com" },
+]
+keywords = [
+    "audio",
+    "music",
+    "wave",
+    "wav",
+    "mp3",
+    "media",
+    "song",
+    "play",
+    "player",
+    "playback",
+    "audioplayer",
+    "mp3player",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Topic :: Multimedia",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Sound/Audio :: Players",
+    "Topic :: Multimedia :: Sound/Audio :: Players :: MP3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "cffi>=1.0.0",
+    "tinytag",
+]
+
+[project.urls]
+Homepage = "https://github.com/cheofusi/just_playback"
+Source = "https://github.com/cheofusi/just_playback"
+
+[tool.setuptools.packages.find]
+include = ["just_playback*"]
+
+[tool.cibuildwheel]
+build = "cp3{9,10,11,12,13,14}-*"
+archs = ["auto64"]
+test-command = 'python -c "from just_playback import Playback; print(Playback)"'
+test-skip = "*-win_arm64"
+build-verbosity = 1
+
+[tool.cibuildwheel.linux]
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"

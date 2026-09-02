@@ -1,5 +1,4 @@
 import os
-import platform
 from pathlib import Path
 
 from cffi import FFI
@@ -20,11 +19,6 @@ compiler_args = []
 if os.name == "posix":
     libraries = ["dl", "m", "pthread"]
     compiler_args = ["-g1", "-O3"]
-
-if platform.system() != "Darwin":
-    compiler_args += ["-march=native"]
-
-
 
 ffibuilder.cdef( ma_defs + '\n\n'
                 """ 
