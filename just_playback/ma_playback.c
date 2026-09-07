@@ -22,6 +22,11 @@ ma_result check_available_playback_devices(Attrs* attrs)
         ma_res = ma_context_get_devices(&context, &pPlaybackInfos, &playbackCount, &pCaptureInfos, &captureCount);
         attrs->num_playback_devices = playbackCount;
 
+        // The context was only needed to count devices. Without this, every
+        // Playback() leaks a backend connection (one PulseAudio client on
+        // Linux) for the lifetime of the process.
+        ma_context_uninit(&context);
+
         return ma_res;
     }
 }
