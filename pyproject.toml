@@ -12,7 +12,7 @@ description = "A small package for file-format-independent audio playback contro
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "LICENSES/*"]
 authors = [
     { name = "Brandon Cheo Fusi", email = "fusibrandon13@gmail.com" },
 ]
@@ -22,6 +22,8 @@ keywords = [
     "wave",
     "wav",
     "mp3",
+    "ogg",
+    "opus",
     "media",
     "song",
     "play",
@@ -61,10 +63,17 @@ include = ["just_playback*"]
 [tool.cibuildwheel]
 build = "cp3{9,10,11,12,13,14}-*"
 archs = ["auto64"]
-test-command = 'python -c "from just_playback import Playback; print(Playback)"'
+test-command = 'python "{project}/tests/check_opus_wheel.py"'
 test-skip = "*-win_arm64"
 build-verbosity = 1
 
 [tool.cibuildwheel.linux]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
+before-all = "python3 {package}/tools/prepare_opus_deps.py"
+
+[tool.cibuildwheel.macos]
+before-all = "python3 {package}/tools/prepare_opus_deps.py"
+
+[tool.cibuildwheel.windows]
+before-all = "python {package}/tools/prepare_opus_deps.py"

@@ -8,6 +8,7 @@ __pycache__/
 *.egg-info
 test_files/
 *.todo
-wheelhouse/
+release-dist/
 wheels/
-/scratch/
+scratch/
+external/

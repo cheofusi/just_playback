@@ -4,6 +4,16 @@ A small Python library for playing audio files. It provides file-format-independ
 
 The package uses [miniaudio](https://github.com/mackron/miniaudio) for awesome cross-platform, dependency-free asynchronous audio playback that stays away from your main thread.
 
+## Supported audio formats
+
+- WAV
+- MP3
+- FLAC
+- Ogg Vorbis
+- Ogg Opus in the official Linux, Windows, and macOS wheels
+
+`just_playback.SUPPORTED_AUDIO_FORMATS` reports the formats enabled in the installed build. Ogg Opus is an optional native component and is not enabled in source builds unless its dependencies have been prepared as described below.
+
 ## Requirements
 
 just_playback requires Python 3.9 or newer.
@@ -52,6 +62,17 @@ Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then crea
 ```shell
 uv sync
 ```
+
+To build with Ogg Opus support, first download the pinned Xiph release archives, verify their checksums, and build the static dependencies:
+
+```shell
+python tools/prepare_opus_deps.py
+uv build --wheel
+```
+
+The downloaded sources and compiled libraries are stored under the ignored `build/native` directory. A normal source build that does not run this preparation step remains dependency-free and excludes Ogg Opus support.
+
+The release-wheel jobs run that preparation automatically. They statically link libogg, libopus, and opusfile into the extension, so wheel users do not need separate codec DLLs, dylibs, or shared libraries. CMake and network access are only required when preparing a source build with Opus enabled.
 
 Build the source distribution:
 

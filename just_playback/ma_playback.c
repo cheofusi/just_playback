@@ -1,6 +1,42 @@
 #include "ma_playback.h"
 
 
+static ma_result init_decoder_file(const char* path_to_file, ma_decoder* decoder)
+{
+    ma_decoder_config decoder_config = ma_decoder_config_init_default();
+
+#ifdef JUST_PLAYBACK_HAS_OPUS
+    ma_decoding_backend_vtable* custom_backends[] = {
+        ma_decoding_backend_libopus
+    };
+
+    decoder_config.ppCustomBackendVTables = custom_backends;
+    decoder_config.customBackendCount =
+        sizeof(custom_backends) / sizeof(custom_backends[0]);
+#endif
+
+    return ma_decoder_init_file(path_to_file, &decoder_config, decoder);
+}
+
+
+static ma_result init_decoder_file_w(const wchar_t* path_to_file, ma_decoder* decoder)
+{
+    ma_decoder_config decoder_config = ma_decoder_config_init_default();
+
+#ifdef JUST_PLAYBACK_HAS_OPUS
+    ma_decoding_backend_vtable* custom_backends[] = {
+        ma_decoding_backend_libopus
+    };
+
+    decoder_config.ppCustomBackendVTables = custom_backends;
+    decoder_config.customBackendCount =
+        sizeof(custom_backends) / sizeof(custom_backends[0]);
+#endif
+
+    return ma_decoder_init_file_w(path_to_file, &decoder_config, decoder);
+}
+
+
 ma_result check_available_playback_devices(Attrs* attrs) 
 {
     // count the # of available playback devices
@@ -50,7 +86,7 @@ ma_result load_file(Attrs* attrs, const char* path_to_file)
     // Open an audio file and read the necessary config needed for getting audio samples
     // from the file.
 
-    ma_result ma_res = ma_decoder_init_file(path_to_file, NULL, &(attrs->decoder));
+    ma_result ma_res = init_decoder_file(path_to_file, &(attrs->decoder));
     
     attrs->deviceConfig.playback.format   = attrs->decoder.outputFormat;
     attrs->deviceConfig.playback.channels = attrs->decoder.outputChannels;
@@ -64,7 +100,7 @@ ma_result load_file_w(Attrs* attrs, const wchar_t* path_to_file)
     // Open an audio file and read the necessary config needed for getting audio samples
     // from the file.
 
-    ma_result ma_res = ma_decoder_init_file_w(path_to_file, NULL, &(attrs->decoder));
+    ma_result ma_res = init_decoder_file_w(path_to_file, &(attrs->decoder));
     
     attrs->deviceConfig.playback.format   = attrs->decoder.outputFormat;
     attrs->deviceConfig.playback.channels = attrs->decoder.outputChannels;
@@ -73,6 +109,73 @@ ma_result load_file_w(Attrs* attrs, const wchar_t* path_to_file)
     return ma_res;
 }
 
+
+ma_result probe_file(const char* path_to_file)
+{
+    ma_decoder decoder;
+    ma_result ma_res = init_decoder_file(path_to_file, &decoder);
+    unsigned char frame[4096];
+    ma_uint64 frames_read = 0;
+
+    if (ma_res != MA_SUCCESS) {
+        return ma_res;
+    }
+
+    if (ma_get_bytes_per_frame(decoder.outputFormat, decoder.outputChannels) > sizeof(frame)) {
+        ma_decoder_uninit(&decoder);
+        return MA_INVALID_DATA;
+    }
+
+    ma_res = ma_decoder_read_pcm_frames(&decoder, frame, 1, &frames_read);
+    if (ma_res == MA_SUCCESS && frames_read != 1) {
+        ma_res = MA_INVALID_DATA;
+    }
+    if (ma_res == MA_SUCCESS) {
+        ma_res = ma_decoder_seek_to_pcm_frame(&decoder, 0);
+    }
+
+    ma_decoder_uninit(&decoder);
+    return ma_res;
+}
+
+
+ma_result probe_file_w(const wchar_t* path_to_file)
+{
+    ma_decoder decoder;
+    ma_result ma_res = init_decoder_file_w(path_to_file, &decoder);
+    unsigned char frame[4096];
+    ma_uint64 frames_read = 0;
+
+    if (ma_res != MA_SUCCESS) {
+        return ma_res;
+    }
+
+    if (ma_get_bytes_per_frame(decoder.outputFormat, decoder.outputChannels) > sizeof(frame)) {
+        ma_decoder_uninit(&decoder);
+        return MA_INVALID_DATA;
+    }
+
+    ma_res = ma_decoder_read_pcm_frames(&decoder, frame, 1, &frames_read);
+    if (ma_res == MA_SUCCESS && frames_read != 1) {
+        ma_res = MA_INVALID_DATA;
+    }
+    if (ma_res == MA_SUCCESS) {
+        ma_res = ma_decoder_seek_to_pcm_frame(&decoder, 0);
+    }
+
+    ma_decoder_uninit(&decoder);
+    return ma_res;
+}
+
+
+bool has_opus_support(void)
+{
+#ifdef JUST_PLAYBACK_HAS_OPUS
+    return true;
+#else
+    return false;
+#endif
+}
 
 
 ma_result init_audio_stream(Attrs* attrs)

@@ -1,3 +1,11 @@
 graft just_playback
 include build_ffi_module.py
+include native/opus-deps.json
+include native/opus/CMakeLists.txt
+include tools/build_opus_deps.py
+include tools/fetch_opus_deps.py
+include tools/prepare_opus_deps.py
+recursive-include LICENSES *
+recursive-include tests *.py *.c *.b64
+prune build
 global-exclude *.py[cod]
