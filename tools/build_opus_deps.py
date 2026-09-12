@@ -45,6 +45,8 @@ def build(build_root: Path) -> Path:
     if prefix.exists():
         shutil.rmtree(prefix)
 
+    # Cache values can be embedded verbatim in generated CMake scripts. Forward
+    # slashes prevent Windows paths such as ``D:\a`` from becoming escapes.
     configure = [
         "cmake",
         "-S",
@@ -53,8 +55,8 @@ def build(build_root: Path) -> Path:
         str(cmake_build),
         "-DCMAKE_BUILD_TYPE=Release",
         "-DCMAKE_INSTALL_LIBDIR=lib",
-        f"-DCMAKE_INSTALL_PREFIX={prefix}",
-        f"-DJUST_PLAYBACK_OPUS_SOURCE_DIR={sources.resolve()}",
+        f"-DCMAKE_INSTALL_PREFIX={prefix.as_posix()}",
+        f"-DJUST_PLAYBACK_OPUS_SOURCE_DIR={sources.resolve().as_posix()}",
     ]
     if os.name == "nt":
         configure.append("-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL")
