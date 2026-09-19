@@ -23,7 +23,9 @@ typedef struct
     ma_device device;
 
     float playback_volume; // persists across multiple file loads
-    bool audio_stream_ready; // true if the audio device has been initialized & is ready to receive audio samples
+
+    bool decoder_initialized;
+    bool device_initialized;
 
     ma_atomic_uint64 frame_offset;
     ma_atomic_uint64 pending_frame_offset; // JP_NO_PENDING_FRAME_OFFSET when no seek is queued
@@ -44,6 +46,7 @@ ma_result init_audio_stream(Attrs* attrs);
 ma_result start_audio_stream(Attrs* attrs);
 ma_result stop_audio_stream(Attrs* attrs);
 ma_result terminate_audio_stream(Attrs* attrs);
+bool is_audio_stream_ready(Attrs* attrs);
 ma_result request_audio_stream_seek(Attrs* attrs, ma_uint64 frame_offset);
 ma_uint64 get_audio_stream_frame_offset(Attrs* attrs);
 ma_result set_audio_stream_looping(Attrs* attrs, bool enabled);

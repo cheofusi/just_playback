@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import base64
+import gc
+import importlib
 import os
 import tempfile
+import weakref
 from pathlib import Path
 
 from _ma_playback import ffi, lib
@@ -27,6 +30,8 @@ def check_native_failure_state() -> None:
 
     if lib.get_audio_stream_frame_offset(attrs) != 0:
         raise AssertionError("the initial frame offset is not zero")
+    if lib.is_audio_stream_ready(attrs):
+        raise AssertionError("the audio stream is ready initially")
     if lib.is_audio_stream_looping(attrs):
         raise AssertionError("looping is enabled initially")
     if lib.is_audio_stream_active(attrs):
@@ -34,16 +39,13 @@ def check_native_failure_state() -> None:
     if lib.did_audio_stream_end_naturally(attrs):
         raise AssertionError("the audio stream is ended initially")
 
-    if lib.request_audio_stream_seek(attrs, 123) != 0:
-        raise AssertionError("a valid seek request was rejected")
-    if lib.get_audio_stream_frame_offset(attrs) != 123:
-        raise AssertionError("the pending seek offset was not reported")
-    if lib.request_audio_stream_seek(attrs, 456) != 0:
-        raise AssertionError("a replacement seek request was rejected")
-    if lib.get_audio_stream_frame_offset(attrs) != 456:
-        raise AssertionError("the latest seek request did not replace the previous one")
-    if lib.request_audio_stream_seek(attrs, (1 << 64) - 1) == 0:
-        raise AssertionError("the reserved seek offset was accepted")
+    if lib.request_audio_stream_seek(attrs, 123) == 0:
+        raise AssertionError("a seek request was accepted without a decoder")
+
+    if lib.terminate_audio_stream(attrs) != 0:
+        raise AssertionError("terminating fresh native state failed")
+    if lib.terminate_audio_stream(attrs) != 0:
+        raise AssertionError("repeated termination of fresh native state failed")
 
     if lib.set_audio_stream_looping(attrs, True) != 0:
         raise AssertionError("enabling looping failed")
@@ -79,11 +81,10 @@ def check_native_failure_state() -> None:
     ) != initial_config:
         raise AssertionError("failed decoder initialization changed the device config")
 
-    attrs.deviceConfig.playback.channels = 255
     init_result = lib.init_audio_stream(attrs)
     if init_result == 0:
-        raise AssertionError("an invalid device configuration was accepted")
-    if attrs.audio_stream_ready:
+        raise AssertionError("device initialization was accepted without a decoder")
+    if lib.is_audio_stream_ready(attrs):
         raise AssertionError("failed device initialization marked the stream ready")
 
     start_result = lib.start_audio_stream(attrs)
@@ -124,6 +125,79 @@ def check_native_failure_state() -> None:
 check_native_failure_state()
 
 
+def check_python_lifecycle() -> None:
+    playback_module = importlib.import_module("just_playback.playback")
+    native_lib = playback_module.lib
+
+    class FakeLib:
+        def __init__(self) -> None:
+            self.terminate_calls = 0
+            self.device_check_result = 0
+
+        def init_attrs(self, attrs) -> None:
+            pass
+
+        def check_available_playback_devices(self, attrs) -> int:
+            attrs.num_playback_devices = 1
+            return self.device_check_result
+
+        def terminate_audio_stream(self, attrs) -> int:
+            self.terminate_calls += 1
+            return 0
+
+    fake_lib = FakeLib()
+    playback_module.lib = fake_lib
+    try:
+        playback = playback_module.Playback()
+        if playback.closed:
+            raise AssertionError("a new Playback is closed")
+        playback.close()
+        playback.close()
+        if not playback.closed:
+            raise AssertionError("close() did not mark Playback closed")
+        if fake_lib.terminate_calls != 1:
+            raise AssertionError("close() was not idempotent")
+        try:
+            playback.play()
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("a playback operation succeeded after close()")
+
+        with playback_module.Playback() as managed:
+            if managed.closed:
+                raise AssertionError("context manager entered with a closed Playback")
+        if not managed.closed:
+            raise AssertionError("context manager did not close Playback")
+        if fake_lib.terminate_calls != 2:
+            raise AssertionError("context manager cleanup did not run exactly once")
+
+        abandoned = playback_module.Playback()
+        abandoned_reference = weakref.ref(abandoned)
+        del abandoned
+        gc.collect()
+        if abandoned_reference() is not None:
+            raise AssertionError("Playback was not garbage collected")
+        if fake_lib.terminate_calls != 3:
+            raise AssertionError("garbage-collection cleanup did not run exactly once")
+
+        fake_lib.device_check_result = -1
+        try:
+            playback_module.Playback()
+        except playback_module.MiniaudioError:
+            pass
+        else:
+            raise AssertionError("Playback construction unexpectedly succeeded")
+        gc.collect()
+        if fake_lib.terminate_calls != 4:
+            raise AssertionError("failed construction did not clean up native state")
+    finally:
+        playback_module.lib = native_lib
+
+
+check_python_lifecycle()
+
+
 def probe(path: Path) -> int:
     if os.name == "nt":
         return lib.probe_file_w(str(path))
@@ -141,12 +215,35 @@ def check_callback_state(path: Path) -> None:
     if load_result != 0:
         raise AssertionError(f"callback test decoder load failed with result {load_result}")
 
+    if os.name == "nt":
+        second_load_result = lib.load_file_w(attrs, str(path))
+    else:
+        second_load_result = lib.load_file(attrs, os.fsencode(path))
+    if second_load_result == 0:
+        raise AssertionError("a second decoder was loaded without terminating the first")
+
+    output_channels = attrs.deviceConfig.playback.channels
+    attrs.deviceConfig.playback.channels = 255
+    if lib.init_audio_stream(attrs) == 0:
+        raise AssertionError("an invalid device configuration was accepted")
+    if lib.is_audio_stream_ready(attrs):
+        raise AssertionError("failed device initialization marked the stream ready")
+    attrs.deviceConfig.playback.channels = output_channels
+
     device = ffi.new("ma_device *")
     device.pUserData = attrs
     output = ffi.new("float[1024]")
 
     if lib.request_audio_stream_seek(attrs, 2) != 0:
         raise AssertionError("callback test seek request failed")
+    if lib.request_audio_stream_seek(attrs, 4) != 0:
+        raise AssertionError("callback test replacement seek request failed")
+    if lib.get_audio_stream_frame_offset(attrs) != 4:
+        raise AssertionError("the latest seek request did not replace the previous one")
+    if lib.request_audio_stream_seek(attrs, 2) != 0:
+        raise AssertionError("callback test final seek request failed")
+    if lib.request_audio_stream_seek(attrs, (1 << 64) - 1) == 0:
+        raise AssertionError("the reserved seek offset was accepted")
     lib.audio_stream_callback(device, output, ffi.NULL, 1)
     if lib.get_audio_stream_frame_offset(attrs) != 3:
         raise AssertionError("the callback did not consume and advance the pending seek")
@@ -154,6 +251,12 @@ def check_callback_state(path: Path) -> None:
     terminate_result = lib.terminate_audio_stream(attrs)
     if terminate_result != 0:
         raise AssertionError(f"callback test cleanup failed with result {terminate_result}")
+    if lib.terminate_audio_stream(attrs) != 0:
+        raise AssertionError("repeated callback test cleanup failed")
+    if lib.is_audio_stream_ready(attrs):
+        raise AssertionError("terminated native state is still ready")
+    if lib.request_audio_stream_seek(attrs, 0) == 0:
+        raise AssertionError("terminated native state accepted a seek request")
 
 
 with tempfile.TemporaryDirectory() as temporary:

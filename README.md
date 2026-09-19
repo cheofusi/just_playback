@@ -55,6 +55,15 @@ Pre-built wheels do not require a compiler. Installing from source requires a C 
 >>> playback.loops_at_end # True if playback is set to restart when it completes.
 ```
 
+`Playback` owns a native decoder and audio device. Use it as a context manager when possible so those resources are released deterministically:
+
+```python
+with Playback("music/sample.opus") as playback:
+    playback.play()
+```
+
+Alternatively, call `playback.close()`. Closing is permanent and safe to do more than once; playback operations raise `RuntimeError` afterward. Automatic cleanup remains available as a fallback.
+
 ## Development
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then create and synchronize the project environment:

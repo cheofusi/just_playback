@@ -37,6 +37,15 @@ static ma_result init_decoder_file_w(const wchar_t* path_to_file, ma_decoder* de
 }
 
 
+static void reset_playback_state(Attrs* attrs)
+{
+    jp_atomic_uint64_store(&(attrs->frame_offset), 0);
+    jp_atomic_uint64_store(&(attrs->pending_frame_offset), JP_NO_PENDING_FRAME_OFFSET);
+    jp_atomic_bool32_store(&(attrs->audio_stream_active), MA_FALSE);
+    jp_atomic_bool32_store(&(attrs->audio_stream_ended_naturally), MA_FALSE);
+}
+
+
 ma_result check_available_playback_devices(Attrs* attrs) 
 {
     // count the # of available playback devices
@@ -85,13 +94,11 @@ void init_attrs(Attrs* attrs)
     attrs->deviceConfig.pUserData        = attrs;
 
     attrs->playback_volume               = 1.0;
-    attrs->audio_stream_ready            = false;
+    attrs->decoder_initialized           = false;
+    attrs->device_initialized            = false;
 
-    jp_atomic_uint64_store(&(attrs->frame_offset), 0);
-    jp_atomic_uint64_store(&(attrs->pending_frame_offset), JP_NO_PENDING_FRAME_OFFSET);
+    reset_playback_state(attrs);
     jp_atomic_bool32_store(&(attrs->loops_at_end), MA_FALSE);
-    jp_atomic_bool32_store(&(attrs->audio_stream_active), MA_FALSE);
-    jp_atomic_bool32_store(&(attrs->audio_stream_ended_naturally), MA_FALSE);
 }
 
 
@@ -104,12 +111,18 @@ ma_result load_file(Attrs* attrs, const char* path_to_file)
     {
         return MA_INVALID_ARGS;
     }
+    if (attrs->decoder_initialized)
+    {
+        return MA_INVALID_OPERATION;
+    }
 
     ma_result ma_res = init_decoder_file(path_to_file, &(attrs->decoder));
     if (ma_res != MA_SUCCESS)
     {
         return ma_res;
     }
+
+    attrs->decoder_initialized = true;
     
     attrs->deviceConfig.playback.format   = attrs->decoder.outputFormat;
     attrs->deviceConfig.playback.channels = attrs->decoder.outputChannels;
@@ -127,12 +140,18 @@ ma_result load_file_w(Attrs* attrs, const wchar_t* path_to_file)
     {
         return MA_INVALID_ARGS;
     }
+    if (attrs->decoder_initialized)
+    {
+        return MA_INVALID_OPERATION;
+    }
 
     ma_result ma_res = init_decoder_file_w(path_to_file, &(attrs->decoder));
     if (ma_res != MA_SUCCESS)
     {
         return ma_res;
     }
+
+    attrs->decoder_initialized = true;
     
     attrs->deviceConfig.playback.format   = attrs->decoder.outputFormat;
     attrs->deviceConfig.playback.channels = attrs->decoder.outputChannels;
@@ -227,11 +246,19 @@ ma_result init_audio_stream(Attrs* attrs)
     {
         return MA_INVALID_ARGS;
     }
+    if (!attrs->decoder_initialized)
+    {
+        return MA_INVALID_OPERATION;
+    }
+    if (attrs->device_initialized)
+    {
+        return MA_DEVICE_ALREADY_INITIALIZED;
+    }
 
     ma_result ma_res = ma_device_init(NULL, &(attrs->deviceConfig), &(attrs->device));
     if (ma_res == MA_SUCCESS)
     {
-        attrs->audio_stream_ready = true;
+        attrs->device_initialized = true;
     }
     
     return ma_res;
@@ -245,6 +272,10 @@ ma_result start_audio_stream(Attrs* attrs)
     if (attrs == NULL)
     {
         return MA_INVALID_ARGS;
+    }
+    if (!attrs->device_initialized)
+    {
+        return MA_DEVICE_NOT_INITIALIZED;
     }
 
     ma_result ma_res = ma_device_start(&(attrs->device));
@@ -265,6 +296,10 @@ ma_result stop_audio_stream(Attrs* attrs)
     {
         return MA_INVALID_ARGS;
     }
+    if (!attrs->device_initialized)
+    {
+        return MA_DEVICE_NOT_INITIALIZED;
+    }
 
     ma_result ma_res = ma_device_stop(&(attrs->device)); 
     if (ma_res == MA_SUCCESS)
@@ -280,21 +315,39 @@ ma_result terminate_audio_stream(Attrs* attrs)
 {
     // uninitialize the audio device & audio file decoder
 
+    ma_result ma_res = MA_SUCCESS;
+
     if (attrs == NULL)
     {
         return MA_INVALID_ARGS;
     }
 
-    ma_device_uninit(&(attrs->device));
-    ma_result ma_res = ma_decoder_uninit(&(attrs->decoder));
+    if (attrs->device_initialized)
+    {
+        ma_device_uninit(&(attrs->device));
+        attrs->device_initialized = false;
+    }
 
-    attrs->audio_stream_ready = false;
-    jp_atomic_uint64_store(&(attrs->frame_offset), 0);
-    jp_atomic_uint64_store(&(attrs->pending_frame_offset), JP_NO_PENDING_FRAME_OFFSET);
-    jp_atomic_bool32_store(&(attrs->audio_stream_active), MA_FALSE);
-    jp_atomic_bool32_store(&(attrs->audio_stream_ended_naturally), MA_FALSE);
+    if (attrs->decoder_initialized)
+    {
+        ma_res = ma_decoder_uninit(&(attrs->decoder));
+        attrs->decoder_initialized = false;
+    }
+
+    reset_playback_state(attrs);
     
     return ma_res;
+}
+
+
+bool is_audio_stream_ready(Attrs* attrs)
+{
+    if (attrs == NULL)
+    {
+        return false;
+    }
+
+    return attrs->device_initialized;
 }
 
 
@@ -303,6 +356,10 @@ ma_result request_audio_stream_seek(Attrs* attrs, ma_uint64 frame_offset)
     if (attrs == NULL)
     {
         return MA_INVALID_ARGS;
+    }
+    if (!attrs->decoder_initialized)
+    {
+        return MA_INVALID_OPERATION;
     }
 
     if (frame_offset == JP_NO_PENDING_FRAME_OFFSET)
@@ -454,6 +511,10 @@ ma_result set_device_volume(Attrs* attrs)
     {
         return MA_INVALID_ARGS;
     }
+    if (!attrs->device_initialized)
+    {
+        return MA_DEVICE_NOT_INITIALIZED;
+    }
 
     ma_result ma_res = ma_device_set_master_volume(&(attrs->device), attrs->playback_volume);
     
@@ -466,6 +527,10 @@ ma_result get_device_volume(Attrs* attrs)
     if (attrs == NULL)
     {
         return MA_INVALID_ARGS;
+    }
+    if (!attrs->device_initialized)
+    {
+        return MA_DEVICE_NOT_INITIALIZED;
     }
 
     float volume;

@@ -2,12 +2,20 @@ import pathlib
 import math
 import platform
 import logging
+import weakref
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 from typing import Optional, Any
 
 from tinytag import TinyTag
 from _ma_playback import ffi, lib
 from .ma_result import MA_RESULT_STR, MiniaudioError
+
+
+def _finalize_audio_stream(terminate_audio_stream: Any, ma_attrs: Any) -> None:
+    try:
+        terminate_audio_stream(ma_attrs)
+    except BaseException:
+        pass
 
 
 
@@ -19,20 +27,45 @@ class Playback:
     
     def __init__(self, path_to_file: Optional[str] = ''):
         self.__ma_attrs = ffi.new("Attrs *")
-        
+        lib.init_attrs(self.__ma_attrs)
+
+        self.__paused: bool = False
+        self.__file_duration: float = 0.0
+        self.__closed: bool = False
+        self.__finalizer = weakref.finalize(
+            self,
+            _finalize_audio_stream,
+            lib.terminate_audio_stream,
+            self.__ma_attrs,
+        )
+
         self.__bind(lib.check_available_playback_devices(self.__ma_attrs))
 
         if self.__ma_attrs.num_playback_devices < 1:
             raise MiniaudioError('No playback device is available!!')
-        
-        else:
-            lib.init_attrs(self.__ma_attrs)
-            
-            self.__paused: bool = False
-            self.__file_duration: float = 0.0
 
-            if path_to_file:
-                self.load_file(path_to_file)   
+        if path_to_file:
+            self.load_file(path_to_file)
+
+    def close(self) -> None:
+        """Release the decoder and audio device. Safe to call more than once."""
+
+        if self.__closed:
+            return
+
+        ma_res = lib.terminate_audio_stream(self.__ma_attrs)
+        self.__closed = True
+        self.__paused = False
+        self.__file_duration = 0.0
+        self.__finalizer.detach()
+        self.__bind(ma_res)
+
+    def __enter__(self) -> "Playback":
+        self.__ensure_open()
+        return self
+
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        self.close()
     
     def load_file(self, path_to_file: str) -> None:
         """
@@ -44,6 +77,8 @@ class Playback:
 
         Throws a FileNotFoundError if the audio file is not found
         """
+
+        self.__ensure_open()
 
         audio_file = pathlib.Path(path_to_file)
         if not audio_file.exists() or not path_to_file:
@@ -68,7 +103,9 @@ class Playback:
             audio file has been loaded
         """
 
-        if not self.__ma_attrs.audio_stream_ready:
+        self.__ensure_open()
+
+        if not lib.is_audio_stream_ready(self.__ma_attrs):
             logging.error('No audio file has been loaded yet!!')
         
         else:
@@ -93,6 +130,8 @@ class Playback:
             Has no effect if playback is inactive
         """
 
+        self.__ensure_open()
+
         if self.active:
             if not self.__paused:
                 # only stop the audio stream if self.pause() didn't
@@ -107,6 +146,8 @@ class Playback:
             already paused
         """
 
+        self.__ensure_open()
+
         if self.active and not self.__paused:
             self.__bind(lib.stop_audio_stream(self.__ma_attrs))
             self.__paused = True
@@ -116,6 +157,8 @@ class Playback:
             Resumes audio playback. Has no effect if playback is inactive or is 
             not paused
         """
+
+        self.__ensure_open()
 
         if self.active and self.__paused:
             self.__paused = False
@@ -131,6 +174,8 @@ class Playback:
                  to the interval [0, self.duration].
         """
 
+        self.__ensure_open()
+
         if self.active:
             pos = min(max(pos, 0), self.__file_duration)
             frame_offset = math.floor(pos * self.__ma_attrs.decoder.outputSampleRate)
@@ -145,6 +190,8 @@ class Playback:
             volume: A value in the interval [0, 1].
         """
 
+        self.__ensure_open()
+
         self.__ma_attrs.playback_volume = min(max(volume, 0), 1)
         if self.active:
             self.__bind(lib.set_device_volume(self.__ma_attrs))
@@ -158,6 +205,7 @@ class Playback:
             loops_at_end: True if playback should loop, False otherwise
         """
 
+        self.__ensure_open()
         self.__bind(lib.set_audio_stream_looping(self.__ma_attrs, loops_at_end))
     
     @property
@@ -166,7 +214,7 @@ class Playback:
             True if playback is playing or is paused and False otherwise
         """
     
-        if not self.__ma_attrs.audio_stream_ready:
+        if self.__closed or not lib.is_audio_stream_ready(self.__ma_attrs):
             return False
         
         else:
@@ -178,7 +226,7 @@ class Playback:
             True if playback is playing
         """
 
-        if not self.__ma_attrs.audio_stream_ready:
+        if self.__closed or not lib.is_audio_stream_ready(self.__ma_attrs):
             return False
         
         else:
@@ -196,7 +244,7 @@ class Playback:
             frame_offset = lib.get_audio_stream_frame_offset(self.__ma_attrs)
             return frame_offset / self.__ma_attrs.decoder.outputSampleRate
         
-        elif self.__ma_attrs.audio_stream_ready:
+        elif not self.__closed and lib.is_audio_stream_ready(self.__ma_attrs):
             return 0
 
         else:        
@@ -230,6 +278,14 @@ class Playback:
     def loops_at_end(self) -> bool:
         return lib.is_audio_stream_looping(self.__ma_attrs)
 
+    @property
+    def closed(self) -> bool:
+        return self.__closed
+
+    def __ensure_open(self) -> None:
+        if self.__closed:
+            raise RuntimeError("Playback is closed")
+
     def __bind(self, ma_res: int) -> None:
         """ 
             Internal method for checking and throwing possible miniaudio errors. 
@@ -238,6 +294,3 @@ class Playback:
 
         if ma_res:
             raise MiniaudioError(MA_RESULT_STR[ma_res])
-
-    def __del__(self):
-        self.__bind(lib.terminate_audio_stream(self.__ma_attrs))
