@@ -76,15 +76,14 @@ class Playback:
                 self.stop()
 
             else:
-                if self.__ma_attrs.audio_stream_ended_naturally:
+                if lib.did_audio_stream_end_naturally(self.__ma_attrs):
                     # the audio file played to completion meanwhile the audio device
                     # is still running so we've got to stop it.
 
                     self.__bind(lib.stop_audio_stream(self.__ma_attrs))
-                    self.__ma_attrs.audio_stream_ended_naturally = False
+                    lib.clear_audio_stream_ended_naturally(self.__ma_attrs)
 
-            self.__ma_attrs.frame_offset = 0
-            self.__ma_attrs.frame_offset_modified = True
+            self.__bind(lib.request_audio_stream_seek(self.__ma_attrs, 0))
             self.__paused = False
             self.__bind(lib.start_audio_stream(self.__ma_attrs))
 
@@ -99,7 +98,7 @@ class Playback:
                 # only stop the audio stream if self.pause() didn't
                 self.__bind(lib.stop_audio_stream(self.__ma_attrs))
 
-            self.__ma_attrs.frame_offset = 0
+            self.__bind(lib.request_audio_stream_seek(self.__ma_attrs, 0))
             self.__paused = False
             
     def pause(self) -> None:
@@ -134,8 +133,8 @@ class Playback:
 
         if self.active:
             pos = min(max(pos, 0), self.__file_duration)
-            self.__ma_attrs.frame_offset = math.floor(pos * self.__ma_attrs.decoder.outputSampleRate)
-            self.__ma_attrs.frame_offset_modified = True
+            frame_offset = math.floor(pos * self.__ma_attrs.decoder.outputSampleRate)
+            self.__bind(lib.request_audio_stream_seek(self.__ma_attrs, frame_offset))
     
     def set_volume(self, volume: float) -> None:
         """
@@ -159,7 +158,7 @@ class Playback:
             loops_at_end: True if playback should loop, False otherwise
         """
 
-        self.__ma_attrs.loops_at_end = loops_at_end
+        self.__bind(lib.set_audio_stream_looping(self.__ma_attrs, loops_at_end))
     
     @property
     def active(self) -> bool:
@@ -171,7 +170,7 @@ class Playback:
             return False
         
         else:
-            return self.__ma_attrs.audio_stream_active or self.__paused
+            return lib.is_audio_stream_active(self.__ma_attrs) or self.__paused
     
     @property
     def playing(self) -> bool:
@@ -183,7 +182,7 @@ class Playback:
             return False
         
         else:
-            return self.__ma_attrs.audio_stream_active
+            return lib.is_audio_stream_active(self.__ma_attrs)
 
     @property
     def curr_pos(self) -> float:
@@ -194,7 +193,8 @@ class Playback:
         """
 
         if self.active:
-            return self.__ma_attrs.frame_offset / self.__ma_attrs.decoder.outputSampleRate
+            frame_offset = lib.get_audio_stream_frame_offset(self.__ma_attrs)
+            return frame_offset / self.__ma_attrs.decoder.outputSampleRate
         
         elif self.__ma_attrs.audio_stream_ready:
             return 0
@@ -228,7 +228,7 @@ class Playback:
     
     @property
     def loops_at_end(self) -> bool:
-        return self.__ma_attrs.loops_at_end
+        return lib.is_audio_stream_looping(self.__ma_attrs)
 
     def __bind(self, ma_res: int) -> None:
         """ 

@@ -84,15 +84,14 @@ void init_attrs(Attrs* attrs)
     attrs->deviceConfig.dataCallback     = audio_stream_callback;
     attrs->deviceConfig.pUserData        = attrs;
 
-    attrs->frame_offset                  = 0;
-
     attrs->playback_volume               = 1.0;
-    attrs->loops_at_end                  = false;
-
-    attrs->frame_offset_modified         = false;
     attrs->audio_stream_ready            = false;
-    attrs->audio_stream_active           = false;
-    attrs->audio_stream_ended_naturally  = false;
+
+    jp_atomic_uint64_store(&(attrs->frame_offset), 0);
+    jp_atomic_uint64_store(&(attrs->pending_frame_offset), JP_NO_PENDING_FRAME_OFFSET);
+    jp_atomic_bool32_store(&(attrs->loops_at_end), MA_FALSE);
+    jp_atomic_bool32_store(&(attrs->audio_stream_active), MA_FALSE);
+    jp_atomic_bool32_store(&(attrs->audio_stream_ended_naturally), MA_FALSE);
 }
 
 
@@ -251,7 +250,7 @@ ma_result start_audio_stream(Attrs* attrs)
     ma_result ma_res = ma_device_start(&(attrs->device));
     if (ma_res == MA_SUCCESS)
     {
-        attrs->audio_stream_active = true;
+        jp_atomic_bool32_store(&(attrs->audio_stream_active), MA_TRUE);
     }
 
     return ma_res;
@@ -270,7 +269,7 @@ ma_result stop_audio_stream(Attrs* attrs)
     ma_result ma_res = ma_device_stop(&(attrs->device)); 
     if (ma_res == MA_SUCCESS)
     {
-        attrs->audio_stream_active = false;
+        jp_atomic_bool32_store(&(attrs->audio_stream_active), MA_FALSE);
     }
     
     return ma_res;
@@ -289,12 +288,105 @@ ma_result terminate_audio_stream(Attrs* attrs)
     ma_device_uninit(&(attrs->device));
     ma_result ma_res = ma_decoder_uninit(&(attrs->decoder));
 
-    attrs->frame_offset = 0;
     attrs->audio_stream_ready = false;
-    attrs->audio_stream_active = false;
-    attrs->audio_stream_ended_naturally = false;
+    jp_atomic_uint64_store(&(attrs->frame_offset), 0);
+    jp_atomic_uint64_store(&(attrs->pending_frame_offset), JP_NO_PENDING_FRAME_OFFSET);
+    jp_atomic_bool32_store(&(attrs->audio_stream_active), MA_FALSE);
+    jp_atomic_bool32_store(&(attrs->audio_stream_ended_naturally), MA_FALSE);
     
     return ma_res;
+}
+
+
+ma_result request_audio_stream_seek(Attrs* attrs, ma_uint64 frame_offset)
+{
+    if (attrs == NULL)
+    {
+        return MA_INVALID_ARGS;
+    }
+
+    if (frame_offset == JP_NO_PENDING_FRAME_OFFSET)
+    {
+        return MA_OUT_OF_RANGE;
+    }
+
+    jp_atomic_uint64_store(&(attrs->pending_frame_offset), frame_offset);
+    return MA_SUCCESS;
+}
+
+
+ma_uint64 get_audio_stream_frame_offset(Attrs* attrs)
+{
+    ma_uint64 pending_frame_offset;
+
+    if (attrs == NULL)
+    {
+        return 0;
+    }
+
+    pending_frame_offset = jp_atomic_uint64_load(&(attrs->pending_frame_offset));
+    if (pending_frame_offset != JP_NO_PENDING_FRAME_OFFSET)
+    {
+        return pending_frame_offset;
+    }
+
+    return jp_atomic_uint64_load(&(attrs->frame_offset));
+}
+
+
+ma_result set_audio_stream_looping(Attrs* attrs, bool enabled)
+{
+    if (attrs == NULL)
+    {
+        return MA_INVALID_ARGS;
+    }
+
+    jp_atomic_bool32_store(&(attrs->loops_at_end), enabled ? MA_TRUE : MA_FALSE);
+    return MA_SUCCESS;
+}
+
+
+bool is_audio_stream_looping(Attrs* attrs)
+{
+    if (attrs == NULL)
+    {
+        return false;
+    }
+
+    return jp_atomic_bool32_load(&(attrs->loops_at_end)) != MA_FALSE;
+}
+
+
+bool is_audio_stream_active(Attrs* attrs)
+{
+    if (attrs == NULL)
+    {
+        return false;
+    }
+
+    return jp_atomic_bool32_load(&(attrs->audio_stream_active)) != MA_FALSE;
+}
+
+
+bool did_audio_stream_end_naturally(Attrs* attrs)
+{
+    if (attrs == NULL)
+    {
+        return false;
+    }
+
+    return jp_atomic_bool32_load(&(attrs->audio_stream_ended_naturally)) != MA_FALSE;
+}
+
+
+void clear_audio_stream_ended_naturally(Attrs* attrs)
+{
+    if (attrs == NULL)
+    {
+        return;
+    }
+
+    jp_atomic_bool32_store(&(attrs->audio_stream_ended_naturally), MA_FALSE);
 }
 
 
@@ -311,32 +403,44 @@ void audio_stream_callback(ma_device* pDevice, void* pOutput, const void* pInput
     }
 
     Attrs* attrs = (Attrs*)pDevice->pUserData;
+    ma_uint64 pending_frame_offset;
     ma_uint64 num_read_frames;
-    
-    if (attrs->frame_offset_modified) 
+
+    pending_frame_offset = jp_atomic_uint64_exchange(
+        &(attrs->pending_frame_offset),
+        JP_NO_PENDING_FRAME_OFFSET
+    );
+    if (pending_frame_offset != JP_NO_PENDING_FRAME_OFFSET)
     {
-        // This is to prevent unecessary calls to ma_decoder_seek_to_pcm_frame except when attr->frame_offset
-        // is explicitly set 
-        ma_decoder_seek_to_pcm_frame(&(attrs->decoder), attrs->frame_offset);
-        attrs->frame_offset_modified = false;
+        ma_result seek_res = ma_decoder_seek_to_pcm_frame(
+            &(attrs->decoder),
+            pending_frame_offset
+        );
+        if (seek_res == MA_SUCCESS)
+        {
+            jp_atomic_uint64_store(&(attrs->frame_offset), pending_frame_offset);
+        }
     }
 
     ma_result ma_res = ma_decoder_read_pcm_frames(&(attrs->decoder), pOutput, frameCount, &num_read_frames);
-    attrs->frame_offset += num_read_frames;
+    jp_atomic_uint64_fetch_add(&(attrs->frame_offset), num_read_frames);
     if (ma_res == MA_AT_END) 
     {
         // decoder has reached the end of the audio file
 
-        if (attrs->loops_at_end)
+        if (jp_atomic_bool32_load(&(attrs->loops_at_end)))
         {
-            ma_decoder_seek_to_pcm_frame(&(attrs->decoder), 0);
-            attrs->frame_offset = 0;
+            ma_result seek_res = ma_decoder_seek_to_pcm_frame(&(attrs->decoder), 0);
+            if (seek_res == MA_SUCCESS)
+            {
+                jp_atomic_uint64_store(&(attrs->frame_offset), 0);
+            }
         }
 
         else
         {
-            attrs->audio_stream_active = false;
-            attrs->audio_stream_ended_naturally = true;
+            jp_atomic_bool32_store(&(attrs->audio_stream_active), MA_FALSE);
+            jp_atomic_bool32_store(&(attrs->audio_stream_ended_naturally), MA_TRUE);
         }
     }
 

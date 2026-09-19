@@ -20,7 +20,7 @@ compiler_args = []
 sources = [miniaudio_src, stb_vorbis_src, ma_playback_src]
 include_dirs = [include_dir]
 extra_objects = []
-depends = []
+depends = [str(Path("just_playback", "ma_atomic_bridge.h"))]
 define_macros = [("MA_NO_GENERATION", "1")]
 
 if os.name == "posix":
@@ -108,15 +108,10 @@ ffibuilder.cdef( ma_defs + '\n\n'
                         ma_device_config deviceConfig;
                         ma_device device;
 
-                        ma_uint64 frame_offset;
-
                         float playback_volume;
-                        bool loops_at_end;
-
-                        bool frame_offset_modified;
                         bool audio_stream_ready;
-                        bool audio_stream_active;
-                        bool audio_stream_ended_naturally;
+
+                        ...;
                     }
                     Attrs;
                     
@@ -131,6 +126,13 @@ ffibuilder.cdef( ma_defs + '\n\n'
                     ma_result start_audio_stream(Attrs* attrs);
                     ma_result stop_audio_stream(Attrs* attrs);
                     ma_result terminate_audio_stream(Attrs* attrs);
+                    ma_result request_audio_stream_seek(Attrs* attrs, ma_uint64 frame_offset);
+                    ma_uint64 get_audio_stream_frame_offset(Attrs* attrs);
+                    ma_result set_audio_stream_looping(Attrs* attrs, bool enabled);
+                    bool is_audio_stream_looping(Attrs* attrs);
+                    bool is_audio_stream_active(Attrs* attrs);
+                    bool did_audio_stream_end_naturally(Attrs* attrs);
+                    void clear_audio_stream_ended_naturally(Attrs* attrs);
                     void audio_stream_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
                     ma_result set_device_volume(Attrs* attrs);
                     ma_result get_device_volume(Attrs* attrs);

@@ -25,6 +25,35 @@ def check_native_failure_state() -> None:
     attrs = ffi.new("Attrs *")
     lib.init_attrs(attrs)
 
+    if lib.get_audio_stream_frame_offset(attrs) != 0:
+        raise AssertionError("the initial frame offset is not zero")
+    if lib.is_audio_stream_looping(attrs):
+        raise AssertionError("looping is enabled initially")
+    if lib.is_audio_stream_active(attrs):
+        raise AssertionError("the audio stream is active initially")
+    if lib.did_audio_stream_end_naturally(attrs):
+        raise AssertionError("the audio stream is ended initially")
+
+    if lib.request_audio_stream_seek(attrs, 123) != 0:
+        raise AssertionError("a valid seek request was rejected")
+    if lib.get_audio_stream_frame_offset(attrs) != 123:
+        raise AssertionError("the pending seek offset was not reported")
+    if lib.request_audio_stream_seek(attrs, 456) != 0:
+        raise AssertionError("a replacement seek request was rejected")
+    if lib.get_audio_stream_frame_offset(attrs) != 456:
+        raise AssertionError("the latest seek request did not replace the previous one")
+    if lib.request_audio_stream_seek(attrs, (1 << 64) - 1) == 0:
+        raise AssertionError("the reserved seek offset was accepted")
+
+    if lib.set_audio_stream_looping(attrs, True) != 0:
+        raise AssertionError("enabling looping failed")
+    if not lib.is_audio_stream_looping(attrs):
+        raise AssertionError("looping was not enabled")
+    if lib.set_audio_stream_looping(attrs, False) != 0:
+        raise AssertionError("disabling looping failed")
+    if lib.is_audio_stream_looping(attrs):
+        raise AssertionError("looping was not disabled")
+
     attrs.deviceConfig.playback.format = 1
     attrs.deviceConfig.playback.channels = 17
     attrs.deviceConfig.sampleRate = 12345
@@ -60,15 +89,14 @@ def check_native_failure_state() -> None:
     start_result = lib.start_audio_stream(attrs)
     if start_result == 0:
         raise AssertionError("an uninitialized device was started")
-    if attrs.audio_stream_active:
+    if lib.is_audio_stream_active(attrs):
         raise AssertionError("failed device start marked the stream active")
 
-    attrs.audio_stream_active = True
     stop_result = lib.stop_audio_stream(attrs)
     if stop_result == 0:
         raise AssertionError("an uninitialized device was stopped")
-    if not attrs.audio_stream_active:
-        raise AssertionError("failed device stop changed the active state")
+    if lib.is_audio_stream_active(attrs):
+        raise AssertionError("failed device stop marked the stream active")
 
     null_result_checks = {
         "device enumeration": lib.check_available_playback_devices(ffi.NULL),
@@ -80,6 +108,8 @@ def check_native_failure_state() -> None:
         "device start": lib.start_audio_stream(ffi.NULL),
         "device stop": lib.stop_audio_stream(ffi.NULL),
         "stream termination": lib.terminate_audio_stream(ffi.NULL),
+        "seek request": lib.request_audio_stream_seek(ffi.NULL, 0),
+        "loop setter": lib.set_audio_stream_looping(ffi.NULL, True),
         "volume setter": lib.set_device_volume(ffi.NULL),
         "volume getter": lib.get_device_volume(ffi.NULL),
     }
@@ -100,9 +130,36 @@ def probe(path: Path) -> int:
     return lib.probe_file(os.fsencode(path))
 
 
+def check_callback_state(path: Path) -> None:
+    attrs = ffi.new("Attrs *")
+    lib.init_attrs(attrs)
+
+    if os.name == "nt":
+        load_result = lib.load_file_w(attrs, str(path))
+    else:
+        load_result = lib.load_file(attrs, os.fsencode(path))
+    if load_result != 0:
+        raise AssertionError(f"callback test decoder load failed with result {load_result}")
+
+    device = ffi.new("ma_device *")
+    device.pUserData = attrs
+    output = ffi.new("float[1024]")
+
+    if lib.request_audio_stream_seek(attrs, 2) != 0:
+        raise AssertionError("callback test seek request failed")
+    lib.audio_stream_callback(device, output, ffi.NULL, 1)
+    if lib.get_audio_stream_frame_offset(attrs) != 3:
+        raise AssertionError("the callback did not consume and advance the pending seek")
+
+    terminate_result = lib.terminate_audio_stream(attrs)
+    if terminate_result != 0:
+        raise AssertionError(f"callback test cleanup failed with result {terminate_result}")
+
+
 with tempfile.TemporaryDirectory() as temporary:
     audio_path = Path(temporary) / "tiny-音声.opus"
     audio_path.write_bytes(encoded_audio)
+    check_callback_state(audio_path)
     result = probe(audio_path)
     duration = TinyTag.get(audio_path).duration
 
