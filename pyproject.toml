@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "just_playback"
-version = "0.1.9"
+version = "1.0.0"
 description = "A small package for file-format-independent audio playback control"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -33,7 +33,7 @@ keywords = [
     "mp3player",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
     "Topic :: Multimedia",
