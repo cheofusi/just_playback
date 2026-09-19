@@ -6,6 +6,6 @@ include tools/build_opus_deps.py
 include tools/fetch_opus_deps.py
 include tools/prepare_opus_deps.py
 recursive-include LICENSES *
-recursive-include tests *.py *.c *.b64
+recursive-include tests *.py *.c *.b64 *.md
 prune build
 global-exclude *.py[cod]

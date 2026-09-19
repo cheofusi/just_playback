@@ -1,4 +1,4 @@
-"""Exercise native failure handling and Ogg Opus without opening an audio device."""
+"""Exercise an installed wheel without opening an audio playback device."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import gc
 import importlib
 import os
 import tempfile
+import wave
 import weakref
 from pathlib import Path
 
@@ -15,26 +16,34 @@ from just_playback import SUPPORTED_AUDIO_FORMATS
 from tinytag import TinyTag
 
 
-fixture = Path(__file__).parent / "data" / "tiny-opus.ogg.b64"
-encoded_audio = base64.b64decode(fixture.read_text(encoding="ascii"))
+DATA_DIRECTORY = Path(__file__).parent / "data"
+EXPECTED_AUDIO_FORMATS = frozenset(
+    {"wav", "mp3", "flac", "ogg-vorbis", "ogg-opus"}
+)
+ENCODED_FIXTURES = {
+    "mp3": ("tiny-mp3.mp3.b64", ".mp3"),
+    "flac": ("tiny-flac.flac.b64", ".flac"),
+    "ogg-vorbis": ("tiny-vorbis.ogg.b64", ".ogg"),
+    "ogg-opus": ("tiny-opus.ogg.b64", ".opus"),
+}
 
-if not lib.has_opus_support():
-    raise AssertionError("the release wheel was built without Ogg Opus support")
-if "ogg-opus" not in SUPPORTED_AUDIO_FORMATS:
-    raise AssertionError("Ogg Opus is missing from SUPPORTED_AUDIO_FORMATS")
 
-miniaudio_version = ffi.string(lib.ma_version_string()).decode("ascii")
-if miniaudio_version != "0.11.25":
-    raise AssertionError(
-        f"expected miniaudio 0.11.25, found {miniaudio_version}"
-    )
+def check_native_versions() -> None:
+    if not lib.has_opus_support():
+        raise AssertionError("the release wheel was built without Ogg Opus support")
 
-opus_version_pointer = lib.get_opus_version_string()
-if opus_version_pointer == ffi.NULL:
-    raise AssertionError("the bundled libopus version is unavailable")
-opus_version = ffi.string(opus_version_pointer).decode("ascii")
-if opus_version != "libopus 1.6.1":
-    raise AssertionError(f"expected libopus 1.6.1, found {opus_version}")
+    miniaudio_version = ffi.string(lib.ma_version_string()).decode("ascii")
+    if miniaudio_version != "0.11.25":
+        raise AssertionError(
+            f"expected miniaudio 0.11.25, found {miniaudio_version}"
+        )
+
+    opus_version_pointer = lib.get_opus_version_string()
+    if opus_version_pointer == ffi.NULL:
+        raise AssertionError("the bundled libopus version is unavailable")
+    opus_version = ffi.string(opus_version_pointer).decode("ascii")
+    if opus_version != "libopus 1.6.1":
+        raise AssertionError(f"expected libopus 1.6.1, found {opus_version}")
 
 
 def check_native_failure_state() -> None:
@@ -135,9 +144,6 @@ def check_native_failure_state() -> None:
     lib.audio_stream_callback(ffi.NULL, ffi.NULL, ffi.NULL, 0)
 
 
-check_native_failure_state()
-
-
 def check_python_lifecycle() -> None:
     playback_module = importlib.import_module("just_playback.playback")
     native_lib = playback_module.lib
@@ -208,9 +214,6 @@ def check_python_lifecycle() -> None:
         playback_module.lib = native_lib
 
 
-check_python_lifecycle()
-
-
 def probe(path: Path) -> int:
     if os.name == "nt":
         return lib.probe_file_w(str(path))
@@ -272,22 +275,69 @@ def check_callback_state(path: Path) -> None:
         raise AssertionError("terminated native state accepted a seek request")
 
 
-with tempfile.TemporaryDirectory() as temporary:
-    audio_path = Path(temporary) / "tiny-音声.opus"
-    audio_path.write_bytes(encoded_audio)
-    check_callback_state(audio_path)
-    result = probe(audio_path)
-    duration = TinyTag.get(audio_path).duration
+def write_wav_fixture(path: Path) -> None:
+    frame_count = 4_800
+    frames = bytearray(frame_count * 2)
+    frames[:2] = (1_000).to_bytes(2, byteorder="little", signed=True)
+    with wave.open(str(path), "wb") as output:
+        output.setnchannels(1)
+        output.setsampwidth(2)
+        output.setframerate(48_000)
+        output.writeframes(frames)
 
-    invalid_path = Path(temporary) / "invalid.opus"
-    invalid_path.write_bytes(b"not an Ogg Opus stream")
-    invalid_result = probe(invalid_path)
 
-if result != 0:
-    raise AssertionError(f"Ogg Opus decoder probe failed with miniaudio result {result}")
-if duration is None or duration <= 0:
-    raise AssertionError("TinyTag could not read the Ogg Opus duration")
-if invalid_result == 0:
-    raise AssertionError("invalid Ogg Opus data was accepted")
+def write_encoded_fixture(format_name: str, path: Path) -> None:
+    fixture_name, _ = ENCODED_FIXTURES[format_name]
+    encoded = "".join(
+        (DATA_DIRECTORY / fixture_name).read_text(encoding="ascii").split()
+    )
+    path.write_bytes(base64.b64decode(encoded, validate=True))
 
-print("Ogg Opus decoder probe: OK")
+
+def check_supported_formats(temporary: Path) -> Path:
+    if SUPPORTED_AUDIO_FORMATS != EXPECTED_AUDIO_FORMATS:
+        raise AssertionError(
+            "unexpected supported formats: "
+            f"expected {sorted(EXPECTED_AUDIO_FORMATS)}, "
+            f"found {sorted(SUPPORTED_AUDIO_FORMATS)}"
+        )
+
+    audio_paths = {"wav": temporary / "tiny-wav-音声.wav"}
+    write_wav_fixture(audio_paths["wav"])
+    for format_name, (_, suffix) in ENCODED_FIXTURES.items():
+        audio_path = temporary / f"tiny-{format_name}-音声{suffix}"
+        write_encoded_fixture(format_name, audio_path)
+        audio_paths[format_name] = audio_path
+
+    for format_name, audio_path in audio_paths.items():
+        result = probe(audio_path)
+        if result != 0:
+            raise AssertionError(
+                f"{format_name} decoder probe failed with miniaudio result {result}"
+            )
+        duration = TinyTag.get(audio_path).duration
+        if duration is None or duration <= 0:
+            raise AssertionError(f"TinyTag could not read the {format_name} duration")
+
+    invalid_path = temporary / "invalid-audio-音声.ogg"
+    invalid_path.write_bytes(b"not a supported audio stream")
+    if probe(invalid_path) == 0:
+        raise AssertionError("invalid audio data was accepted")
+
+    return audio_paths["ogg-opus"]
+
+
+def main() -> None:
+    check_native_versions()
+    check_native_failure_state()
+    check_python_lifecycle()
+
+    with tempfile.TemporaryDirectory() as temporary:
+        opus_path = check_supported_formats(Path(temporary))
+        check_callback_state(opus_path)
+
+    print("Wheel lifecycle and decoder probes: OK")
+
+
+if __name__ == "__main__":
+    main()

@@ -63,8 +63,8 @@ include = ["just_playback*"]
 [tool.cibuildwheel]
 build = "cp3{9,10,11,12,13,14}-*"
 archs = ["auto64"]
-test-command = 'python "{project}/tests/check_opus_wheel.py"'
-test-skip = "*-win_arm64"
+test-command = "python tests/check_wheel.py"
+test-sources = ["tests"]
 build-verbosity = 1
 
 [tool.cibuildwheel.linux]
