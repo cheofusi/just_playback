@@ -1,0 +1,2 @@
+# Preserve vendored miniaudio releases byte-for-byte, including upstream whitespace.
+just_playback/miniaudio/miniaudio.h whitespace=-trailing-space

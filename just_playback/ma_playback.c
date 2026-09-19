@@ -1,5 +1,9 @@
 #include "ma_playback.h"
 
+#ifdef JUST_PLAYBACK_HAS_OPUS
+#include <opus.h>
+#endif
+
 
 static ma_result init_decoder_file(const char* path_to_file, ma_decoder* decoder)
 {
@@ -233,6 +237,16 @@ bool has_opus_support(void)
     return true;
 #else
     return false;
+#endif
+}
+
+
+const char* get_opus_version_string(void)
+{
+#ifdef JUST_PLAYBACK_HAS_OPUS
+    return opus_get_version_string();
+#else
+    return NULL;
 #endif
 }
 

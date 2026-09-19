@@ -28,6 +28,7 @@ if os.name == "posix":
     compiler_args = ["-g1", "-O3"]
 
 default_opus_config = Path.cwd() / "build" / "native" / "opus-build.json"
+opus_manifest_path = Path.cwd() / "native" / "opus-deps.json"
 opus_config_env = os.environ.get("JUST_PLAYBACK_OPUS_CONFIG")
 opus_config_path = Path(opus_config_env).resolve() if opus_config_env else default_opus_config
 
@@ -44,8 +45,25 @@ if os.environ.get("CIBUILDWHEEL") == "1" and not opus_config_path.is_file():
 
 if opus_config_path.is_file():
     opus_config = json.loads(opus_config_path.read_text(encoding="utf-8"))
-    if opus_config.get("format") != 1:
-        raise RuntimeError(f"Unsupported Opus build config format: {opus_config_path}")
+    if opus_config.get("format") != 2:
+        raise RuntimeError(
+            f"Stale or unsupported Opus build config: {opus_config_path}. "
+            "Run tools/prepare_opus_deps.py again."
+        )
+
+    opus_manifest = json.loads(opus_manifest_path.read_text(encoding="utf-8"))
+    expected_dependencies = {
+        dependency["name"]: {
+            "version": dependency["version"],
+            "sha256": dependency["sha256"],
+        }
+        for dependency in opus_manifest["dependencies"]
+    }
+    if opus_config.get("dependencies") != expected_dependencies:
+        raise RuntimeError(
+            f"Prepared Opus dependencies in {opus_config_path} do not match "
+            f"{opus_manifest_path}. Run tools/prepare_opus_deps.py again."
+        )
     if opus_config.get("platform") != platform.system():
         raise RuntimeError(
             f"Opus dependencies in {opus_config_path} were built for "
@@ -92,7 +110,7 @@ if opus_config_path.is_file():
     )
     include_dirs.extend(str(path) for path in opus_include_dirs)
     extra_objects.extend(str(path) for path in opus_extra_objects)
-    for path in [opus_config_path, *opus_extra_objects]:
+    for path in [opus_manifest_path, opus_config_path, *opus_extra_objects]:
         try:
             depends.append(str(path.resolve().relative_to(Path.cwd().resolve())))
         except ValueError:
@@ -120,7 +138,9 @@ ffibuilder.cdef( ma_defs + '\n\n'
                     ma_result load_file_w(Attrs* attrs, const wchar_t* path_to_file);
                     ma_result probe_file(const char* path_to_file);
                     ma_result probe_file_w(const wchar_t* path_to_file);
+                    const char* ma_version_string(void);
                     bool has_opus_support(void);
+                    const char* get_opus_version_string(void);
                     ma_result init_audio_stream(Attrs* attrs);
                     ma_result start_audio_stream(Attrs* attrs);
                     ma_result stop_audio_stream(Attrs* attrs);

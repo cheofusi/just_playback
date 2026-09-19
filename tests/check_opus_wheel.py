@@ -23,6 +23,19 @@ if not lib.has_opus_support():
 if "ogg-opus" not in SUPPORTED_AUDIO_FORMATS:
     raise AssertionError("Ogg Opus is missing from SUPPORTED_AUDIO_FORMATS")
 
+miniaudio_version = ffi.string(lib.ma_version_string()).decode("ascii")
+if miniaudio_version != "0.11.25":
+    raise AssertionError(
+        f"expected miniaudio 0.11.25, found {miniaudio_version}"
+    )
+
+opus_version_pointer = lib.get_opus_version_string()
+if opus_version_pointer == ffi.NULL:
+    raise AssertionError("the bundled libopus version is unavailable")
+opus_version = ffi.string(opus_version_pointer).decode("ascii")
+if opus_version != "libopus 1.6.1":
+    raise AssertionError(f"expected libopus 1.6.1, found {opus_version}")
+
 
 def check_native_failure_state() -> None:
     attrs = ffi.new("Attrs *")

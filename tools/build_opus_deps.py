@@ -14,6 +14,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_BUILD_ROOT = PROJECT_ROOT / "build" / "native"
+DEPENDENCY_NAMES = ("ogg", "opus", "opusfile")
 
 
 def run(command: list[str]) -> None:
@@ -29,13 +30,37 @@ def find_static_library(prefix: Path, names: tuple[str, ...]) -> Path:
     return matches[0].resolve()
 
 
+def read_source_dependencies(sources: Path) -> dict[str, dict[str, str]]:
+    dependencies = {}
+    for name in DEPENDENCY_NAMES:
+        stamp = sources / name / ".just-playback-source.json"
+        if not stamp.is_file():
+            raise RuntimeError(
+                f"Missing source stamp for {name}. Run tools/fetch_opus_deps.py first."
+            )
+
+        try:
+            source = json.loads(stamp.read_text(encoding="utf-8"))
+            version = source["version"]
+            source_hash = source["sha256"]
+        except (OSError, json.JSONDecodeError, KeyError) as error:
+            raise RuntimeError(f"Invalid source stamp: {stamp}") from error
+
+        if not isinstance(version, str) or not isinstance(source_hash, str):
+            raise RuntimeError(f"Invalid source stamp: {stamp}")
+        dependencies[name] = {"version": version, "sha256": source_hash}
+
+    return dependencies
+
+
 def build(build_root: Path) -> Path:
     sources = build_root / "sources"
-    for dependency in ("ogg", "opus", "opusfile"):
+    for dependency in DEPENDENCY_NAMES:
         if not (sources / dependency).is_dir():
             raise RuntimeError(
                 f"Missing {dependency} sources. Run tools/fetch_opus_deps.py first."
             )
+    source_dependencies = read_source_dependencies(sources)
 
     cmake_build = build_root / "cmake"
     prefix = (build_root / "prefix").resolve()
@@ -77,9 +102,10 @@ def build(build_root: Path) -> Path:
         find_static_library(prefix, tuple(f"*ogg{suffix}" for suffix in suffixes)),
     ]
     config = {
-        "format": 1,
+        "format": 2,
         "platform": platform.system(),
         "machine": platform.machine(),
+        "dependencies": source_dependencies,
         "include_dirs": [
             str((prefix / "include").resolve()),
             str((prefix / "include" / "opus").resolve()),

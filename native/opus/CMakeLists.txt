@@ -14,11 +14,15 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(INSTALL_DOCS OFF CACHE BOOL "" FORCE)
 add_subdirectory("${JUST_PLAYBACK_OPUS_SOURCE_DIR}/ogg" ogg)
 
-# libopus. Only the library is needed; programs, tests and training support are not.
+# libopus. Only the library is needed; programs, tests and optional neural
+# enhancements are not.
 set(OPUS_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
 set(OPUS_BUILD_TESTING OFF CACHE BOOL "" FORCE)
 set(OPUS_BUILD_SHARED_LIBRARY OFF CACHE BOOL "" FORCE)
-set(OPUS_BUILD_DNN OFF CACHE BOOL "" FORCE)
+set(OPUS_DRED OFF CACHE BOOL "" FORCE)
+set(OPUS_OSCE OFF CACHE BOOL "" FORCE)
+set(OPUS_INSTALL_PKG_CONFIG_MODULE OFF CACHE BOOL "" FORCE)
+set(OPUS_INSTALL_CMAKE_CONFIG_MODULE OFF CACHE BOOL "" FORCE)
 add_subdirectory("${JUST_PLAYBACK_OPUS_SOURCE_DIR}/opus" opus)
 
 # opusfile 0.12 predates its upstream CMake build. Build only the local-file
