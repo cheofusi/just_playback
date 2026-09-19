@@ -6,29 +6,32 @@ from pathlib import Path
 from cffi import FFI
 ffibuilder = FFI()
 
-ma_defs_path = Path.cwd() / 'just_playback' / 'ma_defs.txt'
-with ma_defs_path.open(mode='r') as f:
+PROJECT_ROOT = Path(__file__).resolve().parent
+PACKAGE_ROOT = PROJECT_ROOT / "just_playback"
+
+ma_defs_path = PACKAGE_ROOT / "ma_defs.txt"
+with ma_defs_path.open(mode="r", encoding="utf-8") as f:
     ma_defs = f.read()
 
-miniaudio_src = str(Path("just_playback", "miniaudio", "miniaudio.c"))
-stb_vorbis_src = str(Path("just_playback", "miniaudio", "stb_vorbis.c"))
-ma_playback_src = str(Path("just_playback", "ma_playback.c"))
-include_dir = str(Path('just_playback'))
+miniaudio_src = str(PACKAGE_ROOT / "miniaudio" / "miniaudio.c")
+stb_vorbis_src = str(PACKAGE_ROOT / "miniaudio" / "stb_vorbis.c")
+ma_playback_src = str(PACKAGE_ROOT / "ma_playback.c")
+include_dir = str(PACKAGE_ROOT)
 
 libraries = []
 compiler_args = []
 sources = [miniaudio_src, stb_vorbis_src, ma_playback_src]
 include_dirs = [include_dir]
 extra_objects = []
-depends = [str(Path("just_playback", "ma_atomic_bridge.h"))]
+depends = [str(PACKAGE_ROOT / "ma_atomic_bridge.h")]
 define_macros = [("MA_NO_GENERATION", "1")]
 
 if os.name == "posix":
     libraries = ["dl", "m", "pthread"]
     compiler_args = ["-g1", "-O3"]
 
-default_opus_config = Path.cwd() / "build" / "native" / "opus-build.json"
-opus_manifest_path = Path.cwd() / "native" / "opus-deps.json"
+default_opus_config = PROJECT_ROOT / "build" / "native" / "opus-build.json"
+opus_manifest_path = PROJECT_ROOT / "native" / "opus-deps.json"
 opus_config_env = os.environ.get("JUST_PLAYBACK_OPUS_CONFIG")
 opus_config_path = Path(opus_config_env).resolve() if opus_config_env else default_opus_config
 
@@ -98,23 +101,20 @@ if opus_config_path.is_file():
 
     sources.append(
         str(
-            Path(
-                "just_playback",
-                "miniaudio",
-                "extras",
-                "decoders",
-                "libopus",
-                "miniaudio_libopus.c",
-            )
+            PACKAGE_ROOT
+            / "miniaudio"
+            / "extras"
+            / "decoders"
+            / "libopus"
+            / "miniaudio_libopus.c"
         )
     )
     include_dirs.extend(str(path) for path in opus_include_dirs)
     extra_objects.extend(str(path) for path in opus_extra_objects)
-    for path in [opus_manifest_path, opus_config_path, *opus_extra_objects]:
-        try:
-            depends.append(str(path.resolve().relative_to(Path.cwd().resolve())))
-        except ValueError:
-            depends.append(str(path))
+    depends.extend(
+        str(path.resolve())
+        for path in [opus_manifest_path, opus_config_path, *opus_extra_objects]
+    )
     define_macros.append(("JUST_PLAYBACK_HAS_OPUS", "1"))
 
 ffibuilder.cdef( ma_defs + '\n\n'

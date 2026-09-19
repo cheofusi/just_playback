@@ -1,9 +1,7 @@
-import pathlib
 import math
-import platform
-import logging
+import os
+import pathlib
 import weakref
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 from typing import Optional, Any
 
 from tinytag import TinyTag
@@ -86,15 +84,15 @@ class Playback:
         
         self.__bind(lib.terminate_audio_stream(self.__ma_attrs))
         
-        if platform.system() == 'Windows':
-            self.__bind(lib.load_file_w(self.__ma_attrs, path_to_file))
+        if os.name == 'nt':
+            self.__bind(lib.load_file_w(self.__ma_attrs, os.fspath(audio_file)))
         else:
-            self.__bind(lib.load_file(self.__ma_attrs, path_to_file.encode('utf-8')))
+            self.__bind(lib.load_file(self.__ma_attrs, os.fsencode(audio_file)))
 
         self.__bind(lib.init_audio_stream(self.__ma_attrs))
         self.__bind(lib.set_device_volume(self.__ma_attrs))
 
-        self.__file_duration = TinyTag.get(path_to_file).duration
+        self.__file_duration = TinyTag.get(audio_file).duration
 
     def play(self) -> None:
         """
@@ -106,23 +104,20 @@ class Playback:
         self.__ensure_open()
 
         if not lib.is_audio_stream_ready(self.__ma_attrs):
-            logging.error('No audio file has been loaded yet!!')
-        
-        else:
-            if self.active:
-                self.stop()
+            return
 
-            else:
-                if lib.did_audio_stream_end_naturally(self.__ma_attrs):
-                    # the audio file played to completion meanwhile the audio device
-                    # is still running so we've got to stop it.
+        if self.active:
+            self.stop()
+        elif lib.did_audio_stream_end_naturally(self.__ma_attrs):
+            # the audio file played to completion meanwhile the audio device
+            # is still running so we've got to stop it.
 
-                    self.__bind(lib.stop_audio_stream(self.__ma_attrs))
-                    lib.clear_audio_stream_ended_naturally(self.__ma_attrs)
+            self.__bind(lib.stop_audio_stream(self.__ma_attrs))
+            lib.clear_audio_stream_ended_naturally(self.__ma_attrs)
 
-            self.__bind(lib.request_audio_stream_seek(self.__ma_attrs, 0))
-            self.__paused = False
-            self.__bind(lib.start_audio_stream(self.__ma_attrs))
+        self.__bind(lib.request_audio_stream_seek(self.__ma_attrs, 0))
+        self.__paused = False
+        self.__bind(lib.start_audio_stream(self.__ma_attrs))
 
     def stop(self) -> None:
         """
