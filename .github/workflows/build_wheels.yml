@@ -97,7 +97,7 @@ jobs:
           path: dist
 
       - name: Build wheels from source distribution
-        uses: pypa/cibuildwheel@v4.2.0
+        uses: pypa/cibuildwheel@v4.2.1
         with:
           package-dir: ./dist/${{ needs.build_sdist.outputs.filename }}
 
